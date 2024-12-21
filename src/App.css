@@ -1,0 +1,70 @@
+import React, { useEffect, useState } from "react";
+import "bootstrap/dist/css/bootstrap.min.css";
+import Header from "./components/Header";
+import Title from "./components/Title";
+import Dropdowns from "./components/Dropdowns";
+import PatientInfo from "./components/PatientInfo";
+import favicon from "./cvs_favicon.ico";
+
+const App: React.FC = () => {
+  const [patientIds, setPatientIds] = useState<string[]>([]);
+  const [drugs, setDrugs] = useState<{ [patientId: string]: string[] }>({});
+  const [selectedPatientId, setSelectedPatientId] = useState<string>("");
+  const [selectedDrug, setSelectedDrug] = useState<string>("");
+
+  const currentDate = new Date().toLocaleDateString();
+
+  useEffect(() => {
+    document.title = "CVS DialSmart";
+
+    const faviconLink = document.createElement("link");
+    faviconLink.rel = "icon";
+    faviconLink.href = favicon;
+    document.head.appendChild(faviconLink);
+
+    return () => {
+      document.head.removeChild(faviconLink);
+    };
+  }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setPatientIds(["6228751", "6228752", "6228753"]);
+      setDrugs({
+        "6228751": ["DUPIXENT", "ASPIRIN"],
+        "6228752": ["IBUPROFEN", "PARACETAMOL"],
+        "6228753": ["METFORMIN", "AMOXICILLIN"],
+      });
+    };
+
+    fetchData();
+  }, []);
+
+  const handleSearch = () => {
+    alert(`Searching for Patient ID: ${selectedPatientId} and Drug: ${selectedDrug}`);
+  };
+
+  return (
+    <div>
+      <Header />
+      <main className="container">
+        <div className="d-flex align-items-center gap-3 mb-3">
+          <Title />
+          <Dropdowns
+            patientIds={patientIds}
+            drugs={drugs}
+            selectedPatientId={selectedPatientId}
+            setSelectedPatientId={setSelectedPatientId}
+            selectedDrug={selectedDrug}
+            setSelectedDrug={setSelectedDrug}
+            onSearch={handleSearch}
+            currentDate={currentDate}
+          />
+        </div>
+        <PatientInfo />
+      </main>
+    </div>
+  );
+};
+
+export default App;

@@ -1,63 +1,114 @@
 import React from "react";
+import Select from "react-select";
 
 interface DropdownsProps {
-  patients: string[];
-  drugs: string[];
+  patientIds: string[];
+  drugs: { [patientId: string]: string[] };
   selectedPatientId: string;
+  setSelectedPatientId: (value: string) => void;
   selectedDrug: string;
-  onPatientChange: (id: string) => void;
-  onDrugChange: (drug: string) => void;
+  setSelectedDrug: (value: string) => void;
+  onSearch: () => void;
   currentDate: string;
 }
 
 const Dropdowns: React.FC<DropdownsProps> = ({
-  patients,
+  patientIds,
   drugs,
   selectedPatientId,
+  setSelectedPatientId,
   selectedDrug,
-  onPatientChange,
-  onDrugChange,
+  setSelectedDrug,
+  onSearch,
   currentDate,
 }) => {
+  const availableDrugs = drugs[selectedPatientId] || [];
+
+  // Convert patient IDs to options for react-select
+  const patientOptions = patientIds.map((id) => ({
+    value: id,
+    label: id,
+  }));
+
+  // Common style for dropdowns
+  const dropdownStyle = {
+    width: "240px", // Same width for both dropdowns
+  };
+
   return (
-    <div className="d-flex align-items-center gap-3">
-      {/* Select Patient Dropdown */}
-      <div>
-        <select
-          id="patient-id"
-          className="form-select"
-          value={selectedPatientId}
-          onChange={(e) => onPatientChange(e.target.value)}
-        >
-          <option value="">Select Patient</option>
-          {patients.map((id) => (
-            <option key={id} value={id}>
-              {id}
+    <div>
+      <div className="d-flex align-items-center gap-3">
+        {/* Select Patient Dropdown with Searchable Feature */}
+        <div style={dropdownStyle}>
+          <Select
+            options={patientOptions}
+            placeholder="Select Patient"
+            value={patientOptions.find((option) => option.value === selectedPatientId)}
+            onChange={(selectedOption) => {
+              setSelectedPatientId(selectedOption?.value || "");
+              setSelectedDrug(""); // Reset drug selection when patient changes
+            }}
+            isClearable
+            styles={{
+              placeholder: (base) => ({
+                ...base,
+                fontSize: "14px", // Consistent font size
+                whiteSpace: "nowrap", // Prevent wrapping
+              }),
+              control: (base) => ({
+                ...base,
+                minHeight: "36px", // Align with the Select Drug dropdown
+                fontSize: "14px",
+              }),
+            }}
+          />
+        </div>
+
+        {/* Select Drug Dropdown */}
+        <div style={dropdownStyle}>
+          <select
+            id="drug"
+            className="form-select"
+            style={{
+              fontSize: "14px",
+              height: "36px",
+              lineHeight: "1.5",
+              padding: "4px 12px",
+            }}
+            value={selectedDrug}
+            onChange={(e) => setSelectedDrug(e.target.value)}
+            disabled={!selectedPatientId}
+          >
+            <option value="" disabled>
+              Select Drug
             </option>
-          ))}
-        </select>
+            {availableDrugs.map((drug) => (
+              <option key={drug} value={drug}>
+                {drug}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Search Button */}
+        <button
+          type="button"
+          className="btn btn-danger"
+          style={{
+            height: "36px",
+            fontSize: "14px",
+            padding: "0 10px",
+            flexShrink: "0",
+          }}
+          onClick={onSearch}
+          disabled={!selectedPatientId || !selectedDrug}
+        >
+          Search
+        </button>
       </div>
 
-      {/* Select Drug Dropdown */}
-      <div>
-        <select
-          id="drug"
-          className="form-select"
-          value={selectedDrug}
-          onChange={(e) => onDrugChange(e.target.value)}
-          disabled={!selectedPatientId} // Disable if no patient is selected
-        >
-          <option value="">Select Drug</option>
-          {drugs.map((drug) => (
-            <option key={drug} value={drug}>
-              {drug}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Date */}
-      <div className="text-muted" style={{ fontSize: "0.9rem" }}>
+      {/* Data Refreshed Section */}
+      <div className="mt-2 text-muted" style={{ fontSize: "12px" }}>
         Data refreshed on: <strong>{currentDate}</strong>
       </div>
     </div>

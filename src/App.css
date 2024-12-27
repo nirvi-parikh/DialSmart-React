@@ -1,70 +1,46 @@
-import React, { useEffect, useState } from "react";
-import "bootstrap/dist/css/bootstrap.min.css";
-import Header from "./components/Header";
-import Title from "./components/Title";
-import Dropdowns from "./components/Dropdowns";
-import PatientInfo from "./components/PatientInfo";
-import favicon from "./cvs_favicon.ico";
+#root {
+  width: 100% !important;
+  height: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+  box-sizing: none;
+  display: contents;
+}
 
-const App: React.FC = () => {
-  const [patientIds, setPatientIds] = useState<string[]>([]);
-  const [drugs, setDrugs] = useState<{ [patientId: string]: string[] }>({});
-  const [selectedPatientId, setSelectedPatientId] = useState<string>("");
-  const [selectedDrug, setSelectedDrug] = useState<string>("");
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
 
-  const currentDate = new Date().toLocaleDateString();
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
 
-  useEffect(() => {
-    document.title = "CVS DialSmart";
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
 
-    const faviconLink = document.createElement("link");
-    faviconLink.rel = "icon";
-    faviconLink.href = favicon;
-    document.head.appendChild(faviconLink);
+.card {
+  padding: 2em;
+}
 
-    return () => {
-      document.head.removeChild(faviconLink);
-    };
-  }, []);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setPatientIds(["6228751", "6228752", "6228753"]);
-      setDrugs({
-        "6228751": ["DUPIXENT", "ASPIRIN"],
-        "6228752": ["IBUPROFEN", "PARACETAMOL"],
-        "6228753": ["METFORMIN", "AMOXICILLIN"],
-      });
-    };
-
-    fetchData();
-  }, []);
-
-  const handleSearch = () => {
-    alert(`Searching for Patient ID: ${selectedPatientId} and Drug: ${selectedDrug}`);
-  };
-
-  return (
-    <div>
-      <Header />
-      <main className="container">
-        <div className="d-flex align-items-center gap-3 mb-3">
-          <Title />
-          <Dropdowns
-            patientIds={patientIds}
-            drugs={drugs}
-            selectedPatientId={selectedPatientId}
-            setSelectedPatientId={setSelectedPatientId}
-            selectedDrug={selectedDrug}
-            setSelectedDrug={setSelectedDrug}
-            onSearch={handleSearch}
-            currentDate={currentDate}
-          />
-        </div>
-        <PatientInfo />
-      </main>
-    </div>
-  );
-};
-
-export default App;
+.read-the-docs {
+  color: #888;
+}

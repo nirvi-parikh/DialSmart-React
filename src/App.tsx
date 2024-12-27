@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { loadDataFromGCS } from "./utils/loadData"; // Import the helper function for GCS loading
 import Header from "./components/Header";
 import Title from "./components/Title";
 import Dropdowns from "./components/Dropdowns";
@@ -16,10 +17,11 @@ import favicon from "./cvs_favicon.ico";
 const App: React.FC = () => {
   const [patientIds, setPatientIds] = useState<string[]>([]);
   const [drugs, setDrugs] = useState<{ [patientId: string]: string[] }>({});
+  const [patientData, setPatientData] = useState<any[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<string>("");
   const [selectedDrug, setSelectedDrug] = useState<string>("");
   const [isTableVisible, setIsTableVisible] = useState<boolean>(false);
-  const [comments, setComments] = useState<string>(""); // Comments state
+  const [comments, setComments] = useState<string>("");
 
   const currentDate = new Date().toLocaleDateString();
 
@@ -36,17 +38,38 @@ const App: React.FC = () => {
     };
   }, []);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setPatientIds(["6228751", "6228752", "6228753"]);
-      setDrugs({
-        "6228751": ["DUPIXENT", "ASPIRIN"],
-        "6228752": ["IBUPROFEN", "PARACETAMOL"],
-        "6228753": ["METFORMIN", "AMOXICILLIN"],
-      });
-    };
+  const fetchPatientData = async () => {
+    const blobName = "dialsmart_daily_data_layer.csv";
+    const bucketName = "anbc-sga-workbench-backup-pss-dev";
 
-    fetchData();
+    try {
+      const data = await loadDataFromGCS(blobName, bucketName);
+      setPatientData(data);
+
+      // Extract patient IDs and drugs
+      const ids = data.map((item: any) => item.patient_id);
+      const drugMap: { [key: string]: string[] } = {};
+
+      data.forEach((item: any) => {
+        const patientId = item.patient_id;
+        const drug = item.drug;
+
+        if (drugMap[patientId]) {
+          drugMap[patientId].push(drug);
+        } else {
+          drugMap[patientId] = [drug];
+        }
+      });
+
+      setPatientIds(ids);
+      setDrugs(drugMap);
+    } catch (error) {
+      console.error("Failed to load patient data:", error.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchPatientData();
   }, []);
 
   const handleSearch = () => {
@@ -90,12 +113,13 @@ const App: React.FC = () => {
         {/* Main Content Section */}
         <div style={{ marginTop: "30px" }}>
           <div className="d-flex gap-3">
-            {/* First Column */}
             <div style={{ flex: "0 0 250px", maxWidth: "250px" }}>
-              <PatientInfo />
+              <PatientInfo
+                selectedPatientId={selectedPatientId}
+                selectedDrug={selectedDrug}
+                patientData={patientData}
+              />
             </div>
-
-            {/* Second Column */}
             <div style={{ flex: 1 }}>
               <SummaryBox />
               <div style={{ marginTop: "20px" }}>
@@ -105,8 +129,6 @@ const App: React.FC = () => {
                 <GeneralInfoBox />
               </div>
             </div>
-
-            {/* Third Column */}
             <div style={{ flex: 1 }}>
               <PatientAdherenceBox />
               <div style={{ marginTop: "20px" }}>
@@ -128,21 +150,19 @@ const App: React.FC = () => {
             onClick={toggleTable}
             style={{
               cursor: "pointer",
-              backgroundColor: "#f8f9fa", // Light grey background
-              color: "#333", // Darker text for contrast
+              backgroundColor: "#f8f9fa",
+              color: "#333",
               padding: "10px 15px",
               borderRadius: "5px",
               marginBottom: "10px",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              border: "1px solid #ccc", // Subtle border
+              border: "1px solid #ccc",
               fontWeight: "bold",
             }}
           >
-            <span>
-              📋 Patient Details (Used for generating Notes above)
-            </span>
+            <span>📋 Patient Details</span>
             <span>{isTableVisible ? "▲" : "▼"}</span>
           </div>
 
@@ -153,19 +173,15 @@ const App: React.FC = () => {
                   <tr>
                     <th>Patient ID</th>
                     <th>Drug</th>
-                    <th>Refills Remaining</th>
-                    <th>Last Interaction</th>
-                    <th>Adherence Score</th>
+                    <th>Details</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {patientIds.map((id) => (
-                    <tr key={id}>
-                      <td>{id}</td>
-                      <td>{drugs[id]?.[0] || "N/A"}</td>
-                      <td>3</td>
-                      <td>Dec 15, 2024</td>
-                      <td>85%</td>
+                  {patientData.map((row, index) => (
+                    <tr key={index}>
+                      <td>{row.patient_id}</td>
+                      <td>{row.drug}</td>
+                      <td>{row.details || "N/A"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -178,16 +194,10 @@ const App: React.FC = () => {
         <div style={{ marginTop: "30px", padding: "15px", border: "1px solid #ccc", borderRadius: "8px" }}>
           <h5 style={{ marginBottom: "15px" }}>We Value Your Feedback</h5>
           <div className="d-flex align-items-center gap-3">
-            <button
-              className="btn btn-outline-success"
-              onClick={() => handleFeedback("up")}
-            >
+            <button className="btn btn-outline-success" onClick={() => handleFeedback("up")}>
               👍
             </button>
-            <button
-              className="btn btn-outline-danger"
-              onClick={() => handleFeedback("down")}
-            >
+            <button className="btn btn-outline-danger" onClick={() => handleFeedback("down")}>
               👎
             </button>
           </div>
@@ -203,7 +213,7 @@ const App: React.FC = () => {
           <button
             className="btn"
             style={{
-              backgroundColor: "#c50005", // Same color as search button
+              backgroundColor: "#c50005",
               color: "white",
               marginTop: "15px",
             }}

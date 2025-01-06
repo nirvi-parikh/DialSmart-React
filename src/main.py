@@ -1,16 +1,15 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from google.cloud import storage
-from google.auth.transport.requests import Request
+from google.auth import impersonated_credentials
 from google.auth import default
 import pandas as pd
-from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-# Configure CORS
+# Configure CORS to allow requests from React
 origins = [
-    "http://localhost:3000",  # Adjust this based on your React app's URL
-    "http://127.0.0.1:3000"
+    "https://localhost:5173",  # React development server
 ]
 
 app.add_middleware(
@@ -21,31 +20,37 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Hardcoded impersonated target service account
-TARGET_SERVICE_ACCOUNT = "target-impersonation-account@your-project.iam.gserviceaccount.com"
+# Constants
 BUCKET_NAME = "your-gcs-bucket-name"
 FILE_NAME = "path/to/your_file.csv"
-PROJECT_NAME = "your-project-id"  # Replace with your actual project ID
+TARGET_SERVICE_ACCOUNT = "target-impersonation-account@your-project.iam.gserviceaccount.com"
+PROJECT_NAME = "your-project-id"
 
-def get_impersonated_credentials():
+# Global DataFrame variable
+dataframe = None
+
+def get_impersonated_credentials(target_service_account: str, scopes: list):
     """
-    Authenticates and creates credentials for the impersonated service account
-    using default application credentials.
+    Creates credentials for impersonating a service account.
+
+    Args:
+        target_service_account (str): The email of the target service account to impersonate.
+        scopes (list): The scopes to use for the impersonated credentials.
 
     Returns:
-        google.auth.credentials.Credentials: Impersonated credentials.
+        impersonated_credentials.Credentials: Impersonated credentials.
     """
-    # Get default credentials (e.g., from `gcloud auth application-default login`)
+    # Get default credentials (e.g., from gcloud auth or service account)
     source_credentials, _ = default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
 
-    # Impersonate the target service account
-    impersonated_credentials = source_credentials.with_subject(TARGET_SERVICE_ACCOUNT)
-
-    # Refresh credentials to ensure they're valid
-    impersonated_credentials.refresh(Request())
-
-    return impersonated_credentials
-
+    # Set up impersonation
+    impersonated_creds = impersonated_credentials.Credentials(
+        source_credentials=source_credentials,
+        target_principal=target_service_account,
+        target_scopes=scopes,
+        lifetime=3600  # Token lifetime in seconds (1 hour)
+    )
+    return impersonated_creds
 
 def load_csv_from_gcs(credentials) -> pd.DataFrame:
     """
@@ -57,41 +62,54 @@ def load_csv_from_gcs(credentials) -> pd.DataFrame:
     Returns:
         pd.DataFrame: DataFrame containing the CSV data.
     """
-    client = storage.Client(credentials=credentials, project=PROJECT_NAME)
-    bucket = client.bucket(BUCKET_NAME)
-    blob = bucket.blob(FILE_NAME)
-    csv_data = blob.download_as_text()
-    df = pd.read_csv(pd.compat.StringIO(csv_data))
-    return df
-
-
-# Global variable for DataFrame
-dataframe = None
+    try:
+        client = storage.Client(credentials=credentials, project=PROJECT_NAME)
+        bucket = client.bucket(BUCKET_NAME)
+        blob = bucket.blob(FILE_NAME)
+        csv_data = blob.download_as_text()
+        df = pd.read_csv(pd.compat.StringIO(csv_data))
+        return df
+    except Exception as e:
+        print(f"Error reading from GCS: {e}")
+        raise
 
 @app.on_event("startup")
 async def startup_event():
+    """
+    Load the CSV data from GCS into a global DataFrame on application startup.
+    """
     global dataframe
     try:
-        # Get impersonated credentials using default application credentials
-        impersonated_credentials = get_impersonated_credentials()
-
-        # Load CSV from GCS
-        dataframe = load_csv_from_gcs(impersonated_credentials)
+        print("Starting up and loading data from GCS...")
+        # Get impersonated credentials
+        impersonated_creds = get_impersonated_credentials(
+            target_service_account=TARGET_SERVICE_ACCOUNT,
+            scopes=["https://www.googleapis.com/auth/cloud-platform"]
+        )
+        # Load data from GCS
+        dataframe = load_csv_from_gcs(impersonated_creds)
+        print("DataFrame loaded successfully:")
+        print(dataframe.head())  # Print the first few rows of the DataFrame for debugging
     except Exception as e:
         print(f"Error loading data: {e}")
 
-
 @app.get("/data")
 async def get_data():
+    """
+    API endpoint to return all patient information and selection options for React.
+
+    Returns:
+        dict: Contains patient_info, select_patient_id, and select_drug_id.
+    """
     global dataframe
     if dataframe is None:
         raise HTTPException(status_code=500, detail="Data not loaded")
     
-    # Prepare "select patient id" and "select drug id" options
+    # Prepare selection options
     patient_ids = dataframe["patient_id"].unique().tolist()
     drug_ids = dataframe["drug"].unique().tolist()
 
-    # Return JSON response
+    # Return response
     return {
         "patient_info": dataframe.to_dict(orient="records"),
         "select_patient_id": patient_ids,

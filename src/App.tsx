@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { loadDataFromGCS } from "./utils/loadData"; // Import the helper function for GCS loading
 import Header from "./components/Header";
 import Title from "./components/Title";
 import Dropdowns from "./components/Dropdowns";
@@ -17,11 +16,11 @@ import favicon from "./cvs_favicon.ico";
 const App: React.FC = () => {
   const [patientIds, setPatientIds] = useState<string[]>([]);
   const [drugs, setDrugs] = useState<{ [patientId: string]: string[] }>({});
-  const [patientData, setPatientData] = useState<any[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<string>("");
   const [selectedDrug, setSelectedDrug] = useState<string>("");
   const [isTableVisible, setIsTableVisible] = useState<boolean>(false);
-  const [comments, setComments] = useState<string>("");
+  const [comments, setComments] = useState<string>(""); // Comments state
+  const [patientData, setPatientData] = useState<any[]>([]); // Patient data fetched from API
 
   const currentDate = new Date().toLocaleDateString();
 
@@ -38,38 +37,26 @@ const App: React.FC = () => {
     };
   }, []);
 
-  const fetchPatientData = async () => {
-    const blobName = "dialsmart_daily_data_layer.csv";
-    const bucketName = "anbc-sga-workbench-backup-pss-dev";
-
-    try {
-      const data = await loadDataFromGCS(blobName, bucketName);
-      setPatientData(data);
-
-      // Extract patient IDs and drugs
-      const ids = data.map((item: any) => item.patient_id);
-      const drugMap: { [key: string]: string[] } = {};
-
-      data.forEach((item: any) => {
-        const patientId = item.patient_id;
-        const drug = item.drug;
-
-        if (drugMap[patientId]) {
-          drugMap[patientId].push(drug);
-        } else {
-          drugMap[patientId] = [drug];
-        }
-      });
-
-      setPatientIds(ids);
-      setDrugs(drugMap);
-    } catch (error) {
-      console.error("Failed to load patient data:", error.message);
-    }
-  };
-
   useEffect(() => {
-    fetchPatientData();
+    const fetchData = async () => {
+      try {
+        const response = await fetch("http://127.0.0.1:8000/data");
+        const data = await response.json();
+
+        setPatientData(data.patient_info);
+        setPatientIds(data.select_patient_id);
+        const drugsData: { [patientId: string]: string[] } = {};
+        data.patient_info.forEach((item: any) => {
+          if (!drugsData[item.patient_id]) drugsData[item.patient_id] = [];
+          drugsData[item.patient_id].push(item.drug);
+        });
+        setDrugs(drugsData);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+
+    fetchData();
   }, []);
 
   const handleSearch = () => {
@@ -113,13 +100,15 @@ const App: React.FC = () => {
         {/* Main Content Section */}
         <div style={{ marginTop: "30px" }}>
           <div className="d-flex gap-3">
+            {/* First Column */}
             <div style={{ flex: "0 0 250px", maxWidth: "250px" }}>
               <PatientInfo
                 selectedPatientId={selectedPatientId}
                 selectedDrug={selectedDrug}
-                patientData={patientData}
               />
             </div>
+
+            {/* Second Column */}
             <div style={{ flex: 1 }}>
               <SummaryBox />
               <div style={{ marginTop: "20px" }}>
@@ -129,6 +118,8 @@ const App: React.FC = () => {
                 <GeneralInfoBox />
               </div>
             </div>
+
+            {/* Third Column */}
             <div style={{ flex: 1 }}>
               <PatientAdherenceBox />
               <div style={{ marginTop: "20px" }}>
@@ -173,15 +164,19 @@ const App: React.FC = () => {
                   <tr>
                     <th>Patient ID</th>
                     <th>Drug</th>
-                    <th>Details</th>
+                    <th>Refills Remaining</th>
+                    <th>Last Interaction</th>
+                    <th>Adherence Score</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {patientData.map((row, index) => (
-                    <tr key={index}>
-                      <td>{row.patient_id}</td>
-                      <td>{row.drug}</td>
-                      <td>{row.details || "N/A"}</td>
+                  {patientData.map((item) => (
+                    <tr key={`${item.patient_id}-${item.drug}`}>
+                      <td>{item.patient_id}</td>
+                      <td>{item.drug}</td>
+                      <td>{item.rx_fills_remaining || "N/A"}</td>
+                      <td>{item.last_interaction || "N/A"}</td>
+                      <td>{item.adherence_score || "N/A"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -191,13 +186,26 @@ const App: React.FC = () => {
         </div>
 
         {/* Feedback Section */}
-        <div style={{ marginTop: "30px", padding: "15px", border: "1px solid #ccc", borderRadius: "8px" }}>
+        <div
+          style={{
+            marginTop: "30px",
+            padding: "15px",
+            border: "1px solid #ccc",
+            borderRadius: "8px",
+          }}
+        >
           <h5 style={{ marginBottom: "15px" }}>We Value Your Feedback</h5>
           <div className="d-flex align-items-center gap-3">
-            <button className="btn btn-outline-success" onClick={() => handleFeedback("up")}>
+            <button
+              className="btn btn-outline-success"
+              onClick={() => handleFeedback("up")}
+            >
               👍
             </button>
-            <button className="btn btn-outline-danger" onClick={() => handleFeedback("down")}>
+            <button
+              className="btn btn-outline-danger"
+              onClick={() => handleFeedback("down")}
+            >
               👎
             </button>
           </div>
@@ -238,11 +246,12 @@ const App: React.FC = () => {
         }}
       >
         <p>
-          The content on this website has been collected by an Artificial Intelligence (AI)
-          Model. While we strive for accuracy, the information may not always be
-          comprehensive or up-to-date. Please consult a professional or authorized source
-          for detailed and verified data. This website is provided for informational
-          purposes only and does not constitute medical or legal advice.
+          The content on this website has been collected by an Artificial
+          Intelligence (AI) Model. While we strive for accuracy, the information
+          may not always be comprehensive or up-to-date. Please consult a
+          professional or authorized source for detailed and verified data. This
+          website is provided for informational purposes only and does not
+          constitute medical or legal advice.
         </p>
       </footer>
     </div>

@@ -14,14 +14,13 @@ import DataInsightsBox from "./components/DataInsightsBox";
 import favicon from "./cvs_favicon.ico";
 
 const App: React.FC = () => {
-  const [patientIds, setPatientIds] = useState<string[]>([]);
-  const [drugs, setDrugs] = useState<{ [patientId: string]: string[] }>({});
+  const [patientInfo, setPatientInfo] = useState<any[]>([]); // Stores the top 10 patient records
+  const [selectPatientIds, setSelectPatientIds] = useState<string[]>([]); // Top 10 patient IDs
+  const [selectDrugIds, setSelectDrugIds] = useState<string[]>([]); // Top 10 drug IDs
   const [selectedPatientId, setSelectedPatientId] = useState<string>("");
   const [selectedDrug, setSelectedDrug] = useState<string>("");
   const [isTableVisible, setIsTableVisible] = useState<boolean>(false);
   const [comments, setComments] = useState<string>(""); // Comments state
-  const [patientData, setPatientData] = useState<any[]>([]); // Patient data fetched from API
-
   const currentDate = new Date().toLocaleDateString();
 
   useEffect(() => {
@@ -37,20 +36,23 @@ const App: React.FC = () => {
     };
   }, []);
 
+  // Fetch data from FastAPI /data endpoint
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch("http://127.0.0.1:8000/data");
-        const data = await response.json();
+        console.log("Fetching data from API...");
+        const response = await fetch("http://127.0.0.1:5173/data");
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
 
-        setPatientData(data.patient_info);
-        setPatientIds(data.select_patient_id);
-        const drugsData: { [patientId: string]: string[] } = {};
-        data.patient_info.forEach((item: any) => {
-          if (!drugsData[item.patient_id]) drugsData[item.patient_id] = [];
-          drugsData[item.patient_id].push(item.drug);
-        });
-        setDrugs(drugsData);
+        const data = await response.json();
+        console.log("API Response:", data);
+
+        // Populate states with data from API
+        setPatientInfo(data.top_records || []);
+        setSelectPatientIds(data.select_patient_id || []);
+        setSelectDrugIds(data.select_drug_id || []);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -86,8 +88,8 @@ const App: React.FC = () => {
         <div className="d-flex align-items-center justify-content-between mb-3">
           <Title />
           <Dropdowns
-            patientIds={patientIds}
-            drugs={drugs}
+            patientIds={selectPatientIds}
+            drugs={{}}
             selectedPatientId={selectedPatientId}
             setSelectedPatientId={setSelectedPatientId}
             selectedDrug={selectedDrug}
@@ -170,7 +172,7 @@ const App: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {patientData.map((item) => (
+                  {patientInfo.map((item) => (
                     <tr key={`${item.patient_id}-${item.drug}`}>
                       <td>{item.patient_id}</td>
                       <td>{item.drug}</td>

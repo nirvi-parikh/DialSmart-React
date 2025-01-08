@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import axios from "axios";
 import "bootstrap/dist/css/bootstrap.min.css";
 import Header from "./components/Header";
 import Title from "./components/Title";
@@ -36,25 +37,26 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // Fetch data from FastAPI /data endpoint
+  // Fetch data from FastAPI /data endpoint with Axios
   useEffect(() => {
     const fetchData = async () => {
       try {
         console.log("Fetching data from API...");
-        const response = await fetch("http://127.0.0.1:5173/data");
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
+        const response = await axios.get("http://127.0.0.1:5173/data", {
+          headers: {
+            "Content-Type": "application/json", // Indicating JSON request
+            Authorization: "Bearer YOUR_ACCESS_TOKEN", // Example: Add an Authorization header
+          },
+        });
 
-        const data = await response.json();
-        console.log("API Response:", data);
+        console.log("API Response:", response.data);
 
         // Populate states with data from API
-        setPatientInfo(data.top_records || []);
-        setSelectPatientIds(data.select_patient_id || []);
-        setSelectDrugIds(data.select_drug_id || []);
-      } catch (error) {
-        console.error("Error fetching data:", error);
+        setPatientInfo(response.data.top_records || []);
+        setSelectPatientIds(response.data.select_patient_id || []);
+        setSelectDrugIds(response.data.select_drug_id || []);
+      } catch (error: any) {
+        console.error("Error fetching data:", error.message || error);
       }
     };
 

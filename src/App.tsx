@@ -63,8 +63,33 @@ const App: React.FC = () => {
     fetchData();
   }, []);
 
-  const handleSearch = () => {
-    alert(`Searching for Patient ID: ${selectedPatientId} and Drug: ${selectedDrug}`);
+  // Fetch filtered patient info when Search is clicked
+  const handleSearch = async () => {
+    if (!selectedPatientId || !selectedDrug) {
+      alert("Please select both Patient ID and Drug before searching.");
+      return;
+    }
+
+    try {
+      console.log(`Fetching filtered data for Patient ID: ${selectedPatientId} and Drug: ${selectedDrug}...`);
+      const response = await axios.get("http://127.0.0.1:5173/data", {
+        params: {
+          patient_id: selectedPatientId,
+          drug: selectedDrug,
+        },
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      console.log("Filtered API Response:", response.data);
+
+      // Update the patient info table with filtered data
+      setPatientInfo(response.data.patient_info || []);
+    } catch (error: any) {
+      console.error("Error fetching filtered patient info:", error.message || error);
+      alert("Failed to fetch patient info. Please try again.");
+    }
   };
 
   const toggleTable = () => {

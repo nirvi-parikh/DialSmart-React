@@ -6,10 +6,10 @@ import pandas as pd
 app = FastAPI()
 
 # Configure CORS
-origins = ["https://localhost:5173"]  # React or other frontend URL
+origins = ["http://localhost:5173"]  # React or other frontend URL
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -61,23 +61,42 @@ async def startup_event():
 
 
 @app.get("/data")
-async def get_data():
+async def get_data(
+    patient_id: str = Query(None, description="Filter by patient ID"),
+    drug: str = Query(None, description="Filter by drug")
+):
     """
-    API endpoint to return all patient information and selection options for React.
+    API endpoint to return patient information and selection options.
+
+    Parameters:
+        patient_id (str): Patient ID to filter the data.
+        drug (str): Drug to filter the data.
 
     Returns:
-        dict: Contains patient_info, select_patient_id, and select_drug_id.
+        dict: Contains filtered patient_info, select_patient_id, and drugs_by_patient.
     """
     global dataframe
     if dataframe is None:
         raise HTTPException(status_code=500, detail="Data not loaded")
-    
-    # Prepare selection options
-    patient_ids = dataframe["patient_id"].unique().tolist()
-    drug_ids = dataframe["drug"].unique().tolist()
 
+    # Get unique patient IDs and drugs grouped by patient
+    patient_ids = dataframe["patient_id"].unique().tolist()
+    drugs_by_patient = (
+        dataframe.groupby("patient_id")["drug"]
+        .apply(list)
+        .to_dict()
+    )
+
+    # Filter the DataFrame based on query parameters
+    filtered_data = dataframe
+    if patient_id:
+        filtered_data = filtered_data[filtered_data["patient_id"] == patient_id]
+    if drug:
+        filtered_data = filtered_data[filtered_data["drug"] == drug]
+
+    # Prepare the response
     return {
-        "patient_info": dataframe.to_dict(orient="records"),
+        "patient_info": filtered_data.to_dict(orient="records"),
         "select_patient_id": patient_ids,
-        "select_drug_id": drug_ids,
+        "drugs_by_patient": drugs_by_patient,
     }

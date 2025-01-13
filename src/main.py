@@ -60,43 +60,53 @@ async def startup_event():
         print(f"Error loading data: {e}")
 
 
-@app.get("/data")
-async def get_data(
-    patient_id: str = Query(None, description="Filter by patient ID"),
-    drug: str = Query(None, description="Filter by drug")
-):
-    """
-    API endpoint to return patient information and selection options.
+INCLUDE_FIELDS = [
+    "PTNT_ID",
+    "Patient_Name",
+    "Drug",
+    "Rx_fills_remaining",
+    "new_rx_status",
+    "pymt_mthd_desc",
+    "current_dnf",
+    "total_fill_supply_in_hand",
+]
 
-    Parameters:
-        patient_id (str): Patient ID to filter the data.
-        drug (str): Drug to filter the data.
+@app.get("/data")
+async def get_data():
+    """
+    API endpoint to return patient_id, drugs_by_patient, and patient_info mapping.
 
     Returns:
-        dict: Contains filtered patient_info, select_patient_id, and drugs_by_patient.
+        dict: Contains patient_id, drugs_by_patient, and patient_info mapping.
     """
     global dataframe
     if dataframe is None:
         raise HTTPException(status_code=500, detail="Data not loaded")
 
-    # Get unique patient IDs and drugs grouped by patient
-    patient_ids = dataframe["patient_id"].unique().tolist()
+    # Filter the DataFrame to include only the required fields
+    filtered_df = dataframe[INCLUDE_FIELDS].copy()
+
+    # Prepare patient_id (unique patient IDs)
+    patient_ids = filtered_df["PTNT_ID"].unique().tolist()
+
+    # Prepare drugs_by_patient (mapping of patient ID to their drugs)
     drugs_by_patient = (
-        dataframe.groupby("patient_id")["drug"]
+        filtered_df.groupby("PTNT_ID")["Drug"]
         .apply(list)
         .to_dict()
     )
 
-    # Filter the DataFrame based on query parameters
-    filtered_data = dataframe
-    if patient_id:
-        filtered_data = filtered_data[filtered_data["patient_id"] == patient_id]
-    if drug:
-        filtered_data = filtered_data[filtered_data["drug"] == drug]
+    # Prepare patient_info (mapping of (patient_id, drug) to patient information)
+    patient_info_mapping = filtered_df.groupby(["PTNT_ID", "Drug"]).apply(
+        lambda group: group.iloc[0].to_dict()
+    ).to_dict()
 
     # Prepare the response
-    return {
-        "patient_info": filtered_data.to_dict(orient="records"),
-        "select_patient_id": patient_ids,
+    response = {
+        "patient_id": patient_ids,
         "drugs_by_patient": drugs_by_patient,
+        "patient_info": patient_info_mapping,
     }
+
+    print("Response Data:", response)  # Debug: Print the response data
+    return response

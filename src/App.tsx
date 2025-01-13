@@ -20,6 +20,7 @@ const App: React.FC = () => {
   const [selectDrugIds, setSelectDrugIds] = useState<string[]>([]); // Top 10 drug IDs
   const [selectedPatientId, setSelectedPatientId] = useState<string>("");
   const [selectedDrug, setSelectedDrug] = useState<string>("");
+  const [patientData, setPatientData] = useState<any | null>(null); // Cached API response
   const [isTableVisible, setIsTableVisible] = useState<boolean>(false);
   const [comments, setComments] = useState<string>(""); // Comments state
   const currentDate = new Date().toLocaleDateString();
@@ -37,61 +38,46 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // Fetch data from FastAPI /data endpoint with Axios
+  // Fetch data once on initial load
   useEffect(() => {
     const fetchData = async () => {
       try {
         console.log("Fetching data from API...");
         const response = await axios.get("http://127.0.0.1:5173/data", {
           headers: {
-            "Content-Type": "application/json", // Indicating JSON request
-            Authorization: "Bearer YOUR_ACCESS_TOKEN", // Example: Add an Authorization header
+            "Content-Type": "application/json",
           },
         });
-
         console.log("API Response:", response.data);
-
-        // Populate states with data from API
-        setPatientInfo(response.data.top_records || []);
-        setSelectPatientIds(response.data.select_patient_id || []);
-        setSelectDrugIds(response.data.select_drug_id || []);
+        setPatientData(response.data); // Cache the entire response
       } catch (error: any) {
         console.error("Error fetching data:", error.message || error);
+        alert("Failed to fetch patient data.");
       }
     };
 
-    fetchData();
+    fetchData(); // Call only once on mount
   }, []);
 
-  // Fetch filtered patient info when Search is clicked
-  const handleSearch = async () => {
+
+  const handleSearch = () => {
     if (!selectedPatientId || !selectedDrug) {
-      alert("Please select both Patient ID and Drug before searching.");
+      alert("Please select both Patient ID and Drug.");
       return;
     }
 
-    try {
-      console.log(`Fetching filtered data for Patient ID: ${selectedPatientId} and Drug: ${selectedDrug}...`);
-      const response = await axios.get("http://127.0.0.1:5173/data", {
-        params: {
-          patient_id: selectedPatientId,
-          drug: selectedDrug,
-        },
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+    // Get patient info mapping
+    const patientKey = `('${selectedPatientId}', '${selectedDrug}')`; // Key format from API response
+    const selectedInfo = patientData?.patient_info?.[patientKey] || null;
 
-      console.log("Filtered API Response:", response.data);
-
-      // Update the patient info table with filtered data
-      setPatientInfo(response.data.patient_info || []);
-    } catch (error: any) {
-      console.error("Error fetching filtered patient info:", error.message || error);
-      alert("Failed to fetch patient info. Please try again.");
+    if (!selectedInfo) {
+      alert("No data found for the selected Patient ID and Drug.");
+      return;
     }
-  };
 
+    setPatientInfo(selectedInfo);
+  };
+  
   const toggleTable = () => {
     setIsTableVisible(!isTableVisible);
   };

@@ -9,6 +9,7 @@ interface PatientData {
   pymt_mthd_desc: string;
   current_dnf: string;
   total_fill_supply_in_hand: number;
+  alt_phone_no?: string; // Assuming optional alternate phone number
 }
 
 interface PatientInfoProps {
@@ -34,48 +35,43 @@ const PatientInfo: React.FC<PatientInfoProps> = ({ patient }) => {
         boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.1)",
       }}
     >
-      <h5 style={{ marginBottom: "15px" }}>Patient Info</h5>
-      <div className="row mb-3">
-        <div className="col-md-6">
-          <strong>Patient ID:</strong>
-          <div>{patient.PTNT_ID}</div>
+      <div
+        className="d-flex flex-column"
+        style={{ gap: "15px" }}
+      >
+        {/* First Row */}
+        <div className="d-flex flex-wrap align-items-center" style={{ gap: "20px" }}>
+          <div>
+            <strong>Patient Name:</strong> {patient.Patient_Name}
+          </div>
+          <div>
+            <strong>Patient ID:</strong> {patient.PTNT_ID}
+          </div>
+          <div>
+            <strong>Drug:</strong> {patient.Drug}
+          </div>
+          <div>
+            <strong>Rx Fills Remaining:</strong> {patient.Rx_fills_remaining}
+          </div>
+          <div>
+            <strong>Expected Supply in Hand:</strong> {patient.total_fill_supply_in_hand}
+          </div>
         </div>
-        <div className="col-md-6">
-          <strong>Patient Name:</strong>
-          <div>{patient.Patient_Name}</div>
-        </div>
-      </div>
 
-      <div className="row mb-3">
-        <div className="col-md-6">
-          <strong>Drug:</strong>
-          <div>{patient.Drug}</div>
-        </div>
-        <div className="col-md-6">
-          <strong>Rx Fills Remaining:</strong>
-          <div>{patient.Rx_fills_remaining}</div>
-        </div>
-      </div>
-
-      <div className="row mb-3">
-        <div className="col-md-6">
-          <strong>New Rx Status:</strong>
-          <div>{patient.new_rx_status}</div>
-        </div>
-        <div className="col-md-6">
-          <strong>Payment Method:</strong>
-          <div>{patient.pymt_mthd_desc}</div>
-        </div>
-      </div>
-
-      <div className="row mb-3">
-        <div className="col-md-6">
-          <strong>Current DNF:</strong>
-          <div>{patient.current_dnf}</div>
-        </div>
-        <div className="col-md-6">
-          <strong>Total Fill Supply in Hand:</strong>
-          <div>{patient.total_fill_supply_in_hand}</div>
+        {/* Second Row */}
+        <div className="d-flex flex-wrap align-items-center" style={{ gap: "20px" }}>
+          <div>
+            <strong>New Rx Status:</strong> {patient.new_rx_status}
+          </div>
+          <div>
+            <strong>Payment Method:</strong> {patient.pymt_mthd_desc}
+          </div>
+          <div>
+            <strong>Alternate Phone No:</strong> {patient.alt_phone_no || "N/A"}
+          </div>
+          <div>
+            <strong>Current DNF:</strong> {patient.current_dnf}
+          </div>
         </div>
       </div>
     </div>

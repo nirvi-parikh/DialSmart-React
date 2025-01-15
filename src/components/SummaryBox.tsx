@@ -42,11 +42,19 @@ const SummaryBox: React.FC = () => {
               Some random text about prescription benefit verification.
             </div>
           </li>
-          <li>
+          <li style={{ marginBottom: "10px" }}>
             <span style={{ fontWeight: "bold" }}>Billing/Invoice:</span>
             <div style={{ fontWeight: "normal", marginTop: "5px" }}>
               Some random text about billing and invoice management.
             </div>
+          </li>
+          <li style={{ marginBottom: "10px" }}>
+            <span style={{ fontWeight: "bold" }}>Communication Summary:</span>
+            <ul style={{ listStyleType: "circle", paddingLeft: "20px", marginTop: "5px" }}>
+              <li style={{ marginBottom: "5px" }}><strong>Call:</strong> Details about calls made.</li>
+              <li style={{ marginBottom: "5px" }}><strong>Refill Reminders:</strong> Details about refill reminders sent.</li>
+              <li><strong>System Communication:</strong> Details about system-generated messages.</li>
+            </ul>
           </li>
         </ul>
       </div>

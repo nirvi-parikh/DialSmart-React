@@ -6,23 +6,18 @@ import Title from "./components/Title";
 import Dropdowns from "./components/Dropdowns";
 import PatientInfo from "./components/PatientInfo";
 import SummaryBox from "./components/SummaryBox";
-import GeneralInfoBox from "./components/GeneralInfoBox";
-import CommunicationBox from "./components/CommunicationBox";
-import PatientAdherenceBox from "./components/PatientAdherenceBox";
 import RefillsLeftBox from "./components/RefillsLeftBox";
-import DigitalRegistrationBox from "./components/DigitalRegistrationBox";
-import DataInsightsBox from "./components/DataInsightsBox";
 import favicon from "./cvs_favicon.ico";
 
 const App: React.FC = () => {
-  const [patientInfo, setPatientInfo] = useState<any[]>([]); // Stores the top 10 patient records
-  const [selectPatientIds, setSelectPatientIds] = useState<string[]>([]); // Top 10 patient IDs
-  const [selectDrugIds, setSelectDrugIds] = useState<string[]>([]); // Top 10 drug IDs
+  const [patientInfo, setPatientInfo] = useState<any | null>(null);
+  const [selectPatientIds, setSelectPatientIds] = useState<string[]>([]);
+  const [selectDrugIds, setSelectDrugIds] = useState<string[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<string>("");
   const [selectedDrug, setSelectedDrug] = useState<string>("");
-  const [patientData, setPatientData] = useState<any | null>(null); // Cached API response
-  const [isTableVisible, setIsTableVisible] = useState<boolean>(false);
-  const [comments, setComments] = useState<string>(""); // Comments state
+  const [patientData, setPatientData] = useState<any | null>(null);
+  const [summaryFeedback, setSummaryFeedback] = useState<string>("");
+  const [refillFeedback, setRefillFeedback] = useState<string>("");
   const currentDate = new Date().toLocaleDateString();
 
   useEffect(() => {
@@ -38,7 +33,6 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // Fetch data once on initial load
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -49,16 +43,15 @@ const App: React.FC = () => {
           },
         });
         console.log("API Response:", response.data);
-        setPatientData(response.data); // Cache the entire response
+        setPatientData(response.data);
       } catch (error: any) {
         console.error("Error fetching data:", error.message || error);
         alert("Failed to fetch patient data.");
       }
     };
 
-    fetchData(); // Call only once on mount
+    fetchData();
   }, []);
-
 
   const handleSearch = () => {
     if (!selectedPatientId || !selectedDrug) {
@@ -66,8 +59,7 @@ const App: React.FC = () => {
       return;
     }
 
-    // Get patient info mapping
-    const patientKey = `('${selectedPatientId}', '${selectedDrug}')`; // Key format from API response
+    const patientKey = `('${selectedPatientId}', '${selectedDrug}')`;
     const selectedInfo = patientData?.patient_info?.[patientKey] || null;
 
     if (!selectedInfo) {
@@ -77,27 +69,29 @@ const App: React.FC = () => {
 
     setPatientInfo(selectedInfo);
   };
-  
-  const toggleTable = () => {
-    setIsTableVisible(!isTableVisible);
-  };
 
-  const handleFeedback = (type: "up" | "down") => {
-    alert(`Feedback submitted: ${type === "up" ? "Thumbs Up" : "Thumbs Down"}`);
-  };
-
-  const handleFeedbackSubmit = () => {
-    if (comments.trim() !== "") {
-      alert(`Comments submitted: ${comments}`);
-      setComments("");
+  const handleSummaryFeedbackSubmit = () => {
+    if (summaryFeedback.trim() !== "") {
+      alert(`Summary Feedback submitted: ${summaryFeedback}`);
+      setSummaryFeedback("");
     }
+  };
+
+  const handleRefillFeedbackSubmit = () => {
+    if (refillFeedback.trim() !== "") {
+      alert(`Refill Feedback submitted: ${refillFeedback}`);
+      setRefillFeedback("");
+    }
+  };
+
+  const handleThumbFeedback = (type: "up" | "down", context: string) => {
+    alert(`Thumbs ${type === "up" ? "Up" : "Down"} submitted for ${context}`);
   };
 
   return (
     <div>
       <Header />
       <main className="container">
-        {/* Title and Dropdowns Row */}
         <div className="d-flex align-items-center justify-content-between mb-3">
           <Title />
           <Dropdowns
@@ -112,143 +106,87 @@ const App: React.FC = () => {
           />
         </div>
 
-        {/* Main Content Section */}
+        <div className="mb-4">
+          <PatientInfo patient={patientInfo} />
+        </div>
+
         <div style={{ marginTop: "30px" }}>
           <div className="d-flex gap-3">
-            {/* First Column */}
-            <div style={{ flex: "0 0 250px", maxWidth: "250px" }}>
-              <PatientInfo
-                selectedPatientId={selectedPatientId}
-                selectedDrug={selectedDrug}
-              />
-            </div>
-
-            {/* Second Column */}
             <div style={{ flex: 1 }}>
               <SummaryBox />
               <div style={{ marginTop: "20px" }}>
-                <CommunicationBox />
-              </div>
-              <div style={{ marginTop: "20px" }}>
-                <GeneralInfoBox />
+                <h5>Summary Feedback</h5>
+                <textarea
+                  className="form-control"
+                  rows={3}
+                  placeholder="Enter feedback for the summary box..."
+                  value={summaryFeedback}
+                  onChange={(e) => setSummaryFeedback(e.target.value)}
+                />
+                <div className="d-flex align-items-center gap-3 mt-2">
+                  <button
+                    className="btn btn-outline-success"
+                    onClick={() => handleThumbFeedback("up", "SummaryBox")}
+                  >
+                    👍
+                  </button>
+                  <button
+                    className="btn btn-outline-danger"
+                    onClick={() => handleThumbFeedback("down", "SummaryBox")}
+                  >
+                    👎
+                  </button>
+                </div>
+                <button
+                  className="btn btn-primary mt-2"
+                  onClick={handleSummaryFeedbackSubmit}
+                  disabled={summaryFeedback.trim() === ""}
+                >
+                  Submit Feedback
+                </button>
               </div>
             </div>
 
-            {/* Third Column */}
             <div style={{ flex: 1 }}>
-              <PatientAdherenceBox />
               <div style={{ marginTop: "20px" }}>
                 <RefillsLeftBox />
               </div>
               <div style={{ marginTop: "20px" }}>
-                <DigitalRegistrationBox />
-              </div>
-              <div style={{ marginTop: "20px" }}>
-                <DataInsightsBox />
+                <h5>Refill Feedback</h5>
+                <textarea
+                  className="form-control"
+                  rows={3}
+                  placeholder="Enter feedback for the refills left box..."
+                  value={refillFeedback}
+                  onChange={(e) => setRefillFeedback(e.target.value)}
+                />
+                <div className="d-flex align-items-center gap-3 mt-2">
+                  <button
+                    className="btn btn-outline-success"
+                    onClick={() => handleThumbFeedback("up", "RefillsLeftBox")}
+                  >
+                    👍
+                  </button>
+                  <button
+                    className="btn btn-outline-danger"
+                    onClick={() => handleThumbFeedback("down", "RefillsLeftBox")}
+                  >
+                    👎
+                  </button>
+                </div>
+                <button
+                  className="btn btn-primary mt-2"
+                  onClick={handleRefillFeedbackSubmit}
+                  disabled={refillFeedback.trim() === ""}
+                >
+                  Submit Feedback
+                </button>
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Collapsible Table Section */}
-        <div style={{ marginTop: "30px" }}>
-          <div
-            onClick={toggleTable}
-            style={{
-              cursor: "pointer",
-              backgroundColor: "#f8f9fa",
-              color: "#333",
-              padding: "10px 15px",
-              borderRadius: "5px",
-              marginBottom: "10px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              border: "1px solid #ccc",
-              fontWeight: "bold",
-            }}
-          >
-            <span>📋 Patient Details</span>
-            <span>{isTableVisible ? "▲" : "▼"}</span>
-          </div>
-
-          {isTableVisible && (
-            <div className="card card-body">
-              <table className="table table-bordered">
-                <thead>
-                  <tr>
-                    <th>Patient ID</th>
-                    <th>Drug</th>
-                    <th>Refills Remaining</th>
-                    <th>Last Interaction</th>
-                    <th>Adherence Score</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {patientInfo.map((item) => (
-                    <tr key={`${item.patient_id}-${item.drug}`}>
-                      <td>{item.patient_id}</td>
-                      <td>{item.drug}</td>
-                      <td>{item.rx_fills_remaining || "N/A"}</td>
-                      <td>{item.last_interaction || "N/A"}</td>
-                      <td>{item.adherence_score || "N/A"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Feedback Section */}
-        <div
-          style={{
-            marginTop: "30px",
-            padding: "15px",
-            border: "1px solid #ccc",
-            borderRadius: "8px",
-          }}
-        >
-          <h5 style={{ marginBottom: "15px" }}>We Value Your Feedback</h5>
-          <div className="d-flex align-items-center gap-3">
-            <button
-              className="btn btn-outline-success"
-              onClick={() => handleFeedback("up")}
-            >
-              👍
-            </button>
-            <button
-              className="btn btn-outline-danger"
-              onClick={() => handleFeedback("down")}
-            >
-              👎
-            </button>
-          </div>
-          <div className="mt-3">
-            <textarea
-              className="form-control"
-              rows={3}
-              placeholder="Enter your comments here..."
-              value={comments}
-              onChange={(e) => setComments(e.target.value)}
-            />
-          </div>
-          <button
-            className="btn"
-            style={{
-              backgroundColor: "#c50005",
-              color: "white",
-              marginTop: "15px",
-            }}
-            onClick={handleFeedbackSubmit}
-            disabled={comments.trim() === ""}
-          >
-            Submit
-          </button>
         </div>
       </main>
 
-      {/* Disclaimer Section */}
       <footer
         style={{
           marginTop: "50px",

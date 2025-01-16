@@ -18,6 +18,7 @@ const App: React.FC = () => {
   const [patientData, setPatientData] = useState<any | null>(null);
   const [summaryFeedback, setSummaryFeedback] = useState<string>("");
   const [refillFeedback, setRefillFeedback] = useState<string>("");
+  const [isTableVisible, setIsTableVisible] = useState<boolean>(false);
   const currentDate = new Date().toLocaleDateString();
 
   useEffect(() => {
@@ -68,6 +69,10 @@ const App: React.FC = () => {
     }
 
     setPatientInfo(selectedInfo);
+  };
+
+  const toggleTable = () => {
+    setIsTableVisible(!isTableVisible);
   };
 
   const handleSummaryFeedbackSubmit = () => {
@@ -184,6 +189,53 @@ const App: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        <div style={{ marginTop: "30px" }}>
+          <div
+            onClick={toggleTable}
+            style={{
+              cursor: "pointer",
+              backgroundColor: "#f8f9fa",
+              color: "#333",
+              padding: "10px 15px",
+              borderRadius: "5px",
+              marginBottom: "10px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              border: "1px solid #ccc",
+              fontWeight: "bold",
+            }}
+          >
+            <span>📋 Patient Details</span>
+            <span>{isTableVisible ? "▲" : "▼"}</span>
+          </div>
+
+          {isTableVisible && (
+            <div className="card card-body">
+              <table className="table table-bordered">
+                <thead>
+                  <tr>
+                    <th>Patient ID</th>
+                    <th>Drug</th>
+                    <th>Refills Remaining</th>
+                    <th>Last Interaction</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {patientInfo?.map((item: any) => (
+                    <tr key={`${item.patient_id}-${item.drug}`}>
+                      <td>{item.patient_id}</td>
+                      <td>{item.drug}</td>
+                      <td>{item.rx_fills_remaining || "N/A"}</td>
+                      <td>{item.last_interaction || "N/A"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </main>
 

@@ -1,6 +1,21 @@
 import React from "react";
 
-const SummaryBox: React.FC = () => {
+interface SummaryBoxProps {
+  notesSummary: {
+    SignificantDetails?: string[];
+    RxInfo?: string[];
+    PrescriptionBenefitVerificationInfo?: string[];
+    BillingInvoice?: string[];
+    GeneralUpdates?: string[];
+    Communication?: {
+      Calls?: string[];
+      RefillReminders?: string[];
+      SystemCommunications?: string[];
+    };
+  };
+}
+
+const SummaryBox: React.FC<SummaryBoxProps> = ({ notesSummary }) => {
   return (
     <div>
       {/* Summary Heading */}
@@ -25,13 +40,13 @@ const SummaryBox: React.FC = () => {
           <li style={{ marginBottom: "10px" }}>
             <span style={{ fontWeight: "bold" }}>Significant details:</span>
             <div style={{ fontWeight: "normal", marginTop: "5px" }}>
-              Some random text about significant details.
+              {notesSummary.SignificantDetails?.join(", ") || "N/A"}
             </div>
           </li>
           <li style={{ marginBottom: "10px" }}>
             <span style={{ fontWeight: "bold" }}>Rx info:</span>
             <div style={{ fontWeight: "normal", marginTop: "5px" }}>
-              Some random text about Rx info.
+              {notesSummary.RxInfo?.join(", ") || "N/A"}
             </div>
           </li>
           <li style={{ marginBottom: "10px" }}>
@@ -39,21 +54,29 @@ const SummaryBox: React.FC = () => {
               Prescription Benefit Verification (BV) info:
             </span>
             <div style={{ fontWeight: "normal", marginTop: "5px" }}>
-              Some random text about prescription benefit verification.
+              {notesSummary.PrescriptionBenefitVerificationInfo?.join(", ") || "N/A"}
             </div>
           </li>
           <li style={{ marginBottom: "10px" }}>
             <span style={{ fontWeight: "bold" }}>Billing/Invoice:</span>
             <div style={{ fontWeight: "normal", marginTop: "5px" }}>
-              Some random text about billing and invoice management.
+              {notesSummary.BillingInvoice?.join(", ") || "N/A"}
             </div>
           </li>
           <li style={{ marginBottom: "10px" }}>
             <span style={{ fontWeight: "bold" }}>Communication Summary:</span>
             <ul style={{ listStyleType: "circle", paddingLeft: "20px", marginTop: "5px" }}>
-              <li style={{ marginBottom: "5px" }}><strong>Call:</strong> Details about calls made.</li>
-              <li style={{ marginBottom: "5px" }}><strong>Refill Reminders:</strong> Details about refill reminders sent.</li>
-              <li><strong>System Communication:</strong> Details about system-generated messages.</li>
+              <li style={{ marginBottom: "5px" }}>
+                <strong>Call:</strong> {notesSummary.Communication?.Calls?.join(", ") || "N/A"}
+              </li>
+              <li style={{ marginBottom: "5px" }}>
+                <strong>Refill Reminders:</strong>{" "}
+                {notesSummary.Communication?.RefillReminders?.join(", ") || "N/A"}
+              </li>
+              <li>
+                <strong>System Communication:</strong>{" "}
+                {notesSummary.Communication?.SystemCommunications?.join(", ") || "N/A"}
+              </li>
             </ul>
           </li>
         </ul>

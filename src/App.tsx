@@ -71,6 +71,58 @@ const App: React.FC = () => {
     setPatientInfo(selectedInfo);
   };
 
+  // 🚀 **State for Summary Feedback**
+  const [summaryFeedback, setSummaryFeedback] = useState("");
+  const [summaryLike, setSummaryLike] = useState<boolean | null>(null);
+
+  // 🚀 **State for Refill Feedback**
+  const [refillFeedback, setRefillFeedback] = useState("");
+  const [refillLike, setRefillLike] = useState<boolean | null>(null);
+
+   // ✅ **Single Function for Like/Dislike (Handles Both Summary & Refill)**
+  const handleThumbClick = (feedbackType: "summary" | "refill", type: "up" | "down") => {
+    if (feedbackType === "summary") {
+      setSummaryLike(type === "up");
+    } else {
+      setRefillLike(type === "up");
+    }
+  };
+
+  // 🛠️ **Submit Feedback**
+  const handleSubmitFeedback = async () => {
+    const feedbackId = uuidv4(); // Generate unique feedback_id
+
+    const payload = {
+      feedback_id: feedbackId,
+      patient_id: selectedPatientId,
+      spclt_ptnt_gid: summaryData.patient_info.gid,
+      drug: selectedDrugId,
+      notes_text: summaryData.notes_text,
+      notes_summary: summaryData.notes_summary,
+      data_insights: summaryData.data_insights,
+      notes_feedback_txt: summaryFeedback || null,
+      notes_insights_txt: refillFeedback || null,
+      notes_like: summaryLike ?? null,
+      data_insights_like: refillLike ?? null,
+      data_update_ts: new Date().toISOString(),
+    };
+
+    try {
+      const response = await axios.post("http://localhost:8000/insert-feedback", payload);
+      alert("Feedback submitted successfully!");
+      console.log("Response:", response.data);
+
+      // Reset Fields after successful submission
+      setSummaryFeedback("");
+      setSummaryLike(null);
+      setRefillFeedback("");
+      setRefillLike(null);
+    } catch (error) {
+      console.error("Error submitting feedback:", error);
+      alert("Failed to submit feedback.");
+    }
+  };
+
   const toggleTable = () => {
     setIsTableVisible(!isTableVisible);
   };
@@ -191,52 +243,63 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        <div style={{ marginTop: "30px" }}>
-          <div
-            onClick={toggleTable}
-            style={{
-              cursor: "pointer",
-              backgroundColor: "#f8f9fa",
-              color: "#333",
-              padding: "10px 15px",
-              borderRadius: "5px",
-              marginBottom: "10px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              border: "1px solid #ccc",
-              fontWeight: "bold",
-            }}
-          >
-            <span>📋 Patient Details</span>
-            <span>{isTableVisible ? "▲" : "▼"}</span>
-          </div>
+         <div style={{ marginTop: "30px" }}>
+      {/* Expand/Collapse Button */}
+      <div
+        onClick={toggleTable}
+        style={{
+          cursor: "pointer",
+          backgroundColor: "#f8f9fa",
+          color: "#333",
+          padding: "10px 15px",
+          borderRadius: "5px",
+          marginBottom: "10px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          border: "1px solid #ccc",
+          fontWeight: "bold",
+        }}
+      >
+        <span>📋 Patient Notes</span>
+        <span>{isTableVisible ? "▲" : "▼"}</span>
+      </div>
 
-          {isTableVisible && (
-            <div className="card card-body">
-              <table className="table table-bordered">
-                <thead>
-                  <tr>
-                    <th>Patient ID</th>
-                    <th>Drug</th>
-                    <th>Refills Remaining</th>
-                    <th>Last Interaction</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {patientInfo?.map((item: any) => (
-                    <tr key={`${item.patient_id}-${item.drug}`}>
-                      <td>{item.patient_id}</td>
-                      <td>{item.drug}</td>
-                      <td>{item.rx_fills_remaining || "N/A"}</td>
-                      <td>{item.last_interaction || "N/A"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+      {/* Expandable Table */}
+      {isTableVisible && (
+        <div
+          className="card card-body"
+          style={{
+            maxHeight: "200px", // Adjust the height as needed
+            overflowY: "auto", // Enables scrolling when content overflows
+            border: "1px solid #ddd",
+            padding: "10px",
+            borderRadius: "5px",
+          }}
+        >
+          <table className="table table-bordered">
+            <thead>
+              <tr style={{ backgroundColor: "#f1f1f1" }}>
+                <th>Patient ID</th>
+                <th>Drug</th>
+                <th>Refills Remaining</th>
+                <th>Last Interaction</th>
+              </tr>
+            </thead>
+            <tbody>
+              {patientInfo?.map((item) => (
+                <tr key={`${item.patient_id}-${item.drug}`}>
+                  <td>{item.patient_id}</td>
+                  <td>{item.drug}</td>
+                  <td>{item.rx_fills_remaining || "N/A"}</td>
+                  <td>{item.last_interaction || "N/A"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
+      )}
+    </div>
       </main>
 
       <footer

@@ -1,22 +1,13 @@
 import re
 
-def parse_data_layer_insights(data_layer_insights):
-    """
-    Parses a markdown-formatted string into a dictionary.
-    
-    Each section is expected to start with a heading line beginning with "###".
-    Within each section, lines with bullet points (starting with '*') are parsed.
-    
-    Parameters:
-        data_layer_insights (str): The markdown text to parse.
-    
-    Returns:
-        dict: Parsed dictionary with section headings as keys.
-    """
+def parse_text(data_layer_insights):
     result = {}
 
-    # Split the text into sections by looking for lines starting with "###"
-    # The regex splits on a newline followed by "###" and a space.
+    # Ensure the text starts with a newline for reliable splitting.
+    if not data_layer_insights.startswith("\n"):
+        data_layer_insights = "\n" + data_layer_insights
+
+    # Split the text into sections whenever a newline is followed by "###" and some whitespace.
     sections = re.split(r'\n###\s+', data_layer_insights)
     
     for section in sections:
@@ -24,21 +15,24 @@ def parse_data_layer_insights(data_layer_insights):
         if not section:
             continue
         
-        # Each section: first line is the heading
+        # The first line of the section is assumed to be the heading.
         lines = section.splitlines()
         heading = lines[0].strip()
         content = "\n".join(lines[1:]).strip()
 
         section_dict = {}
 
-        # Pattern for bullet items: *  **Key**: value
+        # Pattern for bullet items, matching lines like:
+        # *  **Key**: value
         bullet_pattern = r'\*\s+\*\*(.*?)\*\*:\s*(.*)'
-        for key, value in re.findall(bullet_pattern, content):
+        bullet_matches = re.findall(bullet_pattern, content, re.MULTILINE)
+        for key, value in bullet_matches:
             section_dict[key.strip()] = value.strip()
 
-        # Look for a summary line formatted as: **Summary**: value
+        # Pattern for a summary line formatted as:
+        # **Summary**: value
         summary_pattern = r'\*\*Summary\*\*:\s*(.*)'
-        summary_match = re.search(summary_pattern, content)
+        summary_match = re.search(summary_pattern, content, re.MULTILINE)
         if summary_match:
             section_dict["Summary"] = summary_match.group(1).strip()
 
@@ -46,6 +40,19 @@ def parse_data_layer_insights(data_layer_insights):
 
     return result
 
+# Example usage:
+if __name__ == "__main__":
+    data_layer_insights = """### Refills Status
 
-parsed_dict = parse_data_layer_insights(data_layer_insights)
-print(parsed_dict)
+*  **TREMFYA**: 3 refills remaining.
+*  **TALTZ**: 1 refill remaining.
+**Summary**: Both medications have refills available; TREMFYA has 3 and TALTZ has 1.
+
+### Digital Registration and Filling
+
+*  **Digital Registration**: No (N).
+*  **Filling Method**: Manual (drug_digital_fill_flag: Yes, but digital fill percentage is low).
+**Summary**: The patient is not digitally registered and is filling prescriptions manually, despite the option for digital fills.
+"""
+    parsed_result = parse_text(data_layer_insights)
+    print(parsed_result)

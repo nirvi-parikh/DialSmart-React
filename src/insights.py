@@ -24,16 +24,18 @@ def parse_text(data_layer_insights):
 
         # Pattern for bullet items, matching lines like:
         # *  **Key:** value
-        bullet_pattern = r'\*\s+\*\*(.*?)\*\*:\s*(.*)'
+        # The pattern allows an optional colon after the bold marker.
+        bullet_pattern = r'\*\s+\*\*(.*?)\*\*\s*:?\s*(.*)'
         bullet_matches = re.findall(bullet_pattern, content, re.MULTILINE)
         for key, value in bullet_matches:
-            # Remove any trailing colon from the key before storing.
+            # Remove any trailing colon from the key.
             cleaned_key = key.strip().rstrip(':')
             section_dict[cleaned_key] = value.strip()
 
         # Pattern for a summary line formatted as:
         # **Summary:** value
-        summary_pattern = r'\*\*Summary\*\*:\s*(.*)'
+        # Here too the colon after **Summary** is optional.
+        summary_pattern = r'\*\*Summary\*\*\s*:?\s*(.*)'
         summary_match = re.search(summary_pattern, content, re.MULTILINE)
         if summary_match:
             section_dict["Summary"] = summary_match.group(1).strip()

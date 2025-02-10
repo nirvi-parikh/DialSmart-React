@@ -17,20 +17,22 @@ def parse_text(data_layer_insights):
         
         # The first line of the section is assumed to be the heading.
         lines = section.splitlines()
-        heading = lines[0].strip()
+        heading = lines[0].strip().rstrip(':')  # Remove any trailing colon from the heading
         content = "\n".join(lines[1:]).strip()
 
         section_dict = {}
 
         # Pattern for bullet items, matching lines like:
-        # *  **Key**: value
+        # *  **Key:** value
         bullet_pattern = r'\*\s+\*\*(.*?)\*\*:\s*(.*)'
         bullet_matches = re.findall(bullet_pattern, content, re.MULTILINE)
         for key, value in bullet_matches:
-            section_dict[key.strip()] = value.strip()
+            # Remove any trailing colon from the key before storing.
+            cleaned_key = key.strip().rstrip(':')
+            section_dict[cleaned_key] = value.strip()
 
         # Pattern for a summary line formatted as:
-        # **Summary**: value
+        # **Summary:** value
         summary_pattern = r'\*\*Summary\*\*:\s*(.*)'
         summary_match = re.search(summary_pattern, content, re.MULTILINE)
         if summary_match:
@@ -42,17 +44,17 @@ def parse_text(data_layer_insights):
 
 # Example usage:
 if __name__ == "__main__":
-    data_layer_insights = """### Refills Status
+    sample_text = """### Refills Left
 
-*  **TREMFYA**: 3 refills remaining.
-*  **TALTZ**: 1 refill remaining.
-**Summary**: Both medications have refills available; TREMFYA has 3 and TALTZ has 1.
+*  **TREMFYA:** 3 refills remaining.
+*  **TALTZ:** 1 refill remaining.
+**Summary:** Both medications have refills available; TREMFYA has 3 and TALTZ has 1.
 
 ### Digital Registration and Filling
 
-*  **Digital Registration**: No (N).
-*  **Filling Method**: Manual (drug_digital_fill_flag: Yes, but digital fill percentage is low).
-**Summary**: The patient is not digitally registered and is filling prescriptions manually, despite the option for digital fills.
+*  **Digital Registration:** No (N).
+*  **Filling Method:** Manual (drug_digital_fill_flag: Yes, but digital fill percentage is low).
+**Summary:** The patient is not digitally registered and is filling prescriptions manually, despite the option for digital fills.
 """
-    parsed_result = parse_text(data_layer_insights)
+    parsed_result = parse_text(sample_text)
     print(parsed_result)

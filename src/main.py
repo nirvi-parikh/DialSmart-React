@@ -97,9 +97,10 @@ async def get_data():
     )
 
     # Prepare patient_info (mapping of (patient_id, drug) to patient information)
-    patient_info_mapping = filtered_df.groupby(["PTNT_ID", "Drug"]).apply(
-        lambda group: group.iloc[0].to_dict()
-    ).to_dict()
+    patient_info_mapping = {
+        f"({int(row['PTNT_ID'])},{row['Drug']})" : row.to_dict()
+        for _,row in filtered_df.iterrows()
+    }
 
     # Prepare the response
     response = {

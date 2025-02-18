@@ -302,6 +302,10 @@ const App: React.FC = () => {
     </div>
       </main>
 
+      <div style={{ textAlign: "center", marginTop: "20px", fontSize: "14px", color: "#666" }}>
+  Enjoying the "DialSmart" app? If you spot any bugs, need a hand, or have any ideas to make it better, we're all ears. <a href="YOUR_FORM_LINK_HERE">Form link</a>
+</div>
+
       <footer
         style={{
           marginTop: "50px",

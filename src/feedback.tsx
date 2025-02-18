@@ -1,104 +1,105 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { v4 as uuidv4 } from "uuid"; // Generate unique feedback_id
+import { v4 as uuidv4 } from "uuid"; 
 import SummaryBox from "./SummaryBox";
 import RefillsLeftBox from "./RefillsLeftBox";
 
 const App: React.FC = () => {
-  // Mock data for patient and drug selection
+  // ✅ Mock Data
   const selectedPatientId = "P123";
   const selectedDrugId = "D456";
 
-  // Mock summaryData JSON containing df_notes
   const summaryData = {
     df_notes: [
       { spclt_ptnt_gid: "SPG456", notes_text: "First note" },
       { spclt_ptnt_gid: "SPG456", notes_text: "Second note" },
     ],
     notes_summary: "Progress is good overall.",
-    data_insights: "Further dosage might be required.",
+    insights_summary: {
+      "Refills Status": {
+        "Refills Left": "Yes, there are refills remaining for some medications.",
+        "Specific Medications": "MENOPUR: 1 refill, FOLLISTIM AQ: 0 refills, ADALIMUMAB-ADAZ: 0 refills, HUMIRA PEN: 1 refill"
+      }
+    },
   };
 
-  // ✅ Extract spclt_ptnt_gid from df_notes (First available value)
+  // ✅ Extract spclt_ptnt_gid
   const spcltPtntGid = summaryData.df_notes?.[0]?.spclt_ptnt_gid || null;
+  
+  // ✅ Format notes_txt
+  const notesTxt = summaryData.df_notes?.map(row => row.notes_text)?.filter(text => text?.trim()).join(", ") || null;
 
-  // ✅ Concatenate all values from `notes_text` column
-  const concatenatedNotesText = summaryData.df_notes
-    ?.map((row) => row.notes_text)
-    ?.filter(Boolean)
-    .join(", ") || null;
-
-  // ✅ State for Keeping Feedback ID (It remains the same for both Summary & Refill submissions)
+  // ✅ State
   const [feedbackId, setFeedbackId] = useState<string | null>(null);
-
-  // 🚀 **State for Summary Feedback**
   const [summaryFeedback, setSummaryFeedback] = useState("");
   const [summaryLike, setSummaryLike] = useState<boolean | null>(null);
-  const [summarySubmitted, setSummarySubmitted] = useState(false);
-
-  // 🚀 **State for Refill Feedback**
   const [refillFeedback, setRefillFeedback] = useState("");
   const [refillLike, setRefillLike] = useState<boolean | null>(null);
-  const [refillSubmitted, setRefillSubmitted] = useState(false);
 
-  // ✅ **Single Function for Like/Dislike (Handles Both Summary & Refill)**
-  const handleThumbClick = (feedbackType: "summary" | "refill", type: "up" | "down") => {
-    if (feedbackType === "summary") {
-      setSummaryLike(type === "up");
-    } else {
-      setRefillLike(type === "up");
+  // ✅ Function to Generate Payload
+  const generatePayload = (feedbackType: "summary" | "refill", likeType?: "up" | "down") => {
+    const id = feedbackId || uuidv4(); // Generate or reuse feedback_id
+
+    const isSummary = feedbackType === "summary";
+    const isRefill = feedbackType === "refill";
+
+    return {
+      feedback_id: id,
+      patient_id: selectedPatientId,
+      spclt_ptnt_gid: spcltPtntGid,
+      drug: selectedDrugId,
+      notes_txt: notesTxt,
+      notes_summary: summaryData.notes_summary,
+      data_insights: JSON.stringify(summaryData.insights_summary),
+      notes_feedback_txt: isSummary ? summaryFeedback?.trim() || null : null,
+      notes_insights_txt: isRefill ? refillFeedback?.trim() || null : null,
+      notes_like: isSummary ? (likeType ? (likeType === "up" ? "true" : "false") : summaryLike?.toString()) : null,
+      data_insights_like: isRefill ? (likeType ? (likeType === "up" ? "true" : "false") : refillLike?.toString()) : null,
+      data_update_ts: new Date().toISOString(),
+    };
+  };
+
+  // ✅ Function to Send API Request
+  const sendFeedbackToBackend = async (payload: any) => {
+    console.log("Sending Payload:", JSON.stringify(payload, null, 2));
+    try {
+      await axios.post("http://localhost:8000/insert-feedback", payload);
+      setFeedbackId(payload.feedback_id);
+    } catch (error) {
+      console.error("Error submitting feedback:", error);
+      alert("Failed to submit feedback.");
     }
   };
 
-  // 🛠️ **Submit Feedback (Handles Both Summary & Refill)**
+  // ✅ Handle Thumbs Click
+  const handleThumbClick = (feedbackType: "summary" | "refill", type: "up" | "down") => {
+    if (feedbackType === "summary") setSummaryLike(type === "up");
+    else setRefillLike(type === "up");
+
+    alert(`${type === "up" ? "Thumbs Up 👍" : "Thumbs Down 👎"} recorded for ${feedbackType === "summary" ? "Summary" : "Refill"} Feedback.`);
+
+    const payload = generatePayload(feedbackType, type);
+    sendFeedbackToBackend(payload);
+  };
+
+  // ✅ Handle Feedback Submission (Added Your Snippet)
   const handleSubmitFeedback = async (feedbackType: "summary" | "refill") => {
     const id = feedbackId || uuidv4(); // Generate new `feedback_id` if not set
 
     const isSummary = feedbackType === "summary";
     const isRefill = feedbackType === "refill";
 
-    const payload = {
-      feedback_id: id,
-      patient_id: selectedPatientId,
-      spclt_ptnt_gid: spcltPtntGid,
-      drug: selectedDrugId,
-      notes_text: concatenatedNotesText,
-      notes_summary: summaryData.notes_summary,
-      data_insights: summaryData.data_insights,
-      notes_feedback_txt: isSummary ? summaryFeedback || null : null,
-      notes_insights_txt: isRefill ? refillFeedback || null : null,
-      notes_like: isSummary ? summaryLike ?? null : null,
-      data_insights_like: isRefill ? refillLike ?? null : null,
-      data_update_ts: new Date().toISOString(),
-    };
+    const payload = generatePayload(feedbackType);
+    sendFeedbackToBackend(payload);
 
-    try {
-      await axios.post("http://localhost:8000/insert-feedback", payload);
-      alert(`${feedbackType.charAt(0).toUpperCase() + feedbackType.slice(1)} Feedback submitted!`);
-      setFeedbackId(id);
-
-      if (isSummary) {
-        setSummarySubmitted(true);
-      } else {
-        setRefillSubmitted(true);
-      }
-
-      // ✅ Reset everything only after both feedbacks are submitted
-      if (summarySubmitted && refillSubmitted) {
-        setFeedbackId(null);
-        setSummarySubmitted(false);
-        setRefillSubmitted(false);
-      }
-    } catch (error) {
-      console.error(`Error submitting ${feedbackType} feedback:`, error);
-      alert(`Failed to submit ${feedbackType} feedback.`);
-    }
+    if (isSummary) setSummaryFeedback("");
+    if (isRefill) setRefillFeedback("");
   };
 
   return (
     <div style={{ marginTop: "30px" }}>
       <div className="d-flex gap-3">
-        {/* Summary Feedback Section */}
+        {/* ✅ Summary Feedback Section */}
         <div style={{ flex: 1 }}>
           <SummaryBox />
           <div style={{ marginTop: "20px" }}>
@@ -111,29 +112,14 @@ const App: React.FC = () => {
               onChange={(e) => setSummaryFeedback(e.target.value)}
             />
             <div className="d-flex align-items-center gap-3 mt-2">
-              <button
-                className={`btn ${summaryLike === true ? "btn-success" : "btn-outline-success"}`}
-                onClick={() => handleThumbClick("summary", "up")}
-              >
-                👍
-              </button>
-              <button
-                className={`btn ${summaryLike === false ? "btn-danger" : "btn-outline-danger"}`}
-                onClick={() => handleThumbClick("summary", "down")}
-              >
-                👎
-              </button>
+              <button className={`btn ${summaryLike === true ? "btn-success" : "btn-outline-success"}`} onClick={() => handleThumbClick("summary", "up")}>👍</button>
+              <button className={`btn ${summaryLike === false ? "btn-danger" : "btn-outline-danger"}`} onClick={() => handleThumbClick("summary", "down")}>👎</button>
             </div>
-            <button
-              className="btn btn-danger mt-2"
-              onClick={() => handleSubmitFeedback("summary")}
-            >
-              Submit Summary Feedback
-            </button>
+            <button className="btn btn-danger mt-2" onClick={() => handleSubmitFeedback("summary")}>Submit Summary Feedback</button>
           </div>
         </div>
 
-        {/* Refill Feedback Section */}
+        {/* ✅ Refill Feedback Section */}
         <div style={{ flex: 1 }}>
           <RefillsLeftBox />
           <div style={{ marginTop: "20px" }}>
@@ -146,25 +132,10 @@ const App: React.FC = () => {
               onChange={(e) => setRefillFeedback(e.target.value)}
             />
             <div className="d-flex align-items-center gap-3 mt-2">
-              <button
-                className={`btn ${refillLike === true ? "btn-success" : "btn-outline-success"}`}
-                onClick={() => handleThumbClick("refill", "up")}
-              >
-                👍
-              </button>
-              <button
-                className={`btn ${refillLike === false ? "btn-danger" : "btn-outline-danger"}`}
-                onClick={() => handleThumbClick("refill", "down")}
-              >
-                👎
-              </button>
+              <button className={`btn ${refillLike === true ? "btn-success" : "btn-outline-success"}`} onClick={() => handleThumbClick("refill", "up")}>👍</button>
+              <button className={`btn ${refillLike === false ? "btn-danger" : "btn-outline-danger"}`} onClick={() => handleThumbClick("refill", "down")}>👎</button>
             </div>
-            <button
-              className="btn btn-danger mt-2"
-              onClick={() => handleSubmitFeedback("refill")}
-            >
-              Submit Refill Feedback
-            </button>
+            <button className="btn btn-danger mt-2" onClick={() => handleSubmitFeedback("refill")}>Submit Refill Feedback</button>
           </div>
         </div>
       </div>

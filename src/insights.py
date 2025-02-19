@@ -57,3 +57,86 @@ if __name__ == "__main__":
 """
     parsed_result = parse_text(sample_text)
     print(parsed_result)
+
+
+import re
+
+def parse_summary_to_json(summary_text):
+    summary_dict = {}
+
+    # Split the summary into sections based on headings.
+    # This regex splits before lines starting with either markdown headings (e.g., "###") 
+    # or bolded headings (e.g., "**Title**:").
+    sections = re.split(r'(?=^(?:#{1,6}\s+|\*\*.*?\*\*:))', summary_text.strip(), flags=re.MULTILINE)
+
+    for section in sections:
+        section = section.strip()
+        if not section:
+            continue
+
+        # The first line is the heading; the rest is content.
+        lines = section.splitlines()
+        heading_line = lines[0].strip()
+
+        # Extract the title.
+        # This regex allows for optional markdown markers (like "###" or "1. "),
+        # optional bold markers ("**"), and an optional trailing colon.
+        title_match = re.match(r'(?:#{1,6}\s+)?(?:\d+\.\s*)?(?:\*\*)?(.+?)(?:\*\*)?(?::)?\s*$', heading_line)
+        if title_match:
+            title = title_match.group(1).strip()
+            content = "\n".join(lines[1:]).strip()
+
+            # Process the content based on the title.
+            if title == "Significant Details":
+                summary_dict[title] = [" ".join(line.strip().replace('- ', '') for line in content.split('\n') if line.strip())]
+            elif title == "Rx Info":
+                summary_dict[title] = [" ".join(line.strip().replace('- ', '') for line in content.split('\n') if line.strip())]
+            elif title == "Prescription Benefit Verification (BV) Info":
+                summary_dict[title] = [" ".join(line.strip().replace('- ', '') for line in content.split('\n') if line.strip())]
+            elif title == "Billing/Invoice":
+                summary_dict[title] = [" ".join(line.strip().replace('- ', '') for line in content.split('\n') if line.strip())]
+            elif title == "General Updates":
+                summary_dict[title] = [" ".join(line.strip().replace('- ', '') for line in content.split('\n') if line.strip())]
+            elif title == "Communication":
+                summary_dict[title] = {
+                    key.replace("- **", "").replace("**", "").strip(): [value.strip()]
+                    for line in content.split('\n') if ':' in line
+                    for key, value in [line.split(':', 1)]
+                }
+    return summary_dict
+
+# Example usage:
+if __name__ == "__main__":
+    input_text = """
+### Significant Details
+
+- The patient is currently due for a refill of their OFEV prescription.
+- Multiple reminders were sent via SMS and email on January 4, 6, 10, 13, and 15, 2025, indicating urgency in refilling.
+- A blocker may include potential confusion regarding whether they have already filled the prescription.
+
+### Rx Info
+
+- Prescription: OFEV
+- Rx # ending in: 2826
+
+### Prescription Benefit Verification (BV) Info
+
+- No verification outcomes are noted in the provided documentation.
+
+### Billing/Invoice
+
+- Billed: $11.20 on January 1, 2025, with payment processed via credit card.
+
+### General Updates
+
+- An outbound call on January 10, 2025, left a message for the patient concerning refill scheduling.
+
+### Communication
+
+- **Calls**: January 10, 2025: Outbound call left on voicemail regarding refill request.
+- **Refill Reminders**: Frequent SMS and emails were sent on January 4, 6, 10, 13, and 15, urging the patient to refill their prescription.
+- **System Communications**: Ongoing digital outreach through SMS and emails reminding the patient about the refill. Most recent communication occurred on January 22, 2025.
+"""
+    result = parse_summary_to_json(input_text)
+    print(result)
+

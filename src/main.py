@@ -44,6 +44,52 @@ def load_csv_from_gcs() -> pd.DataFrame:
         raise
 
 
+def parse_summary_to_json(summary_text):
+    summary_dict = {}
+
+    # Split the summary into sections based on headings.
+    # This regex splits before lines starting with either markdown headings (e.g., "###") 
+    # or bolded headings (e.g., "**Title**:").
+    sections = re.split(r'(?=^(?:#{1,6}\s+|\*\*.*?\*\*:))', summary_text.strip(), flags=re.MULTILINE)
+
+    for section in sections:
+        section = section.strip()
+        if not section:
+            continue
+
+        # The first line is the heading; the rest is content.
+        lines = section.splitlines()
+        heading_line = lines[0].strip()
+
+        # Extract the title.
+        # This regex allows for optional markdown markers (like "###" or "1. "),
+        # optional bold markers ("**"), and an optional trailing colon.
+        title_match = re.match(r'(?:#{1,6}\s+)?(?:\d+\.\s*)?(?:\*\*)?(.+?)(?:\*\*)?(?::)?\s*$', heading_line)
+        if title_match:
+            title = title_match.group(1).strip()
+            content = "\n".join(lines[1:]).strip()
+
+            # Process the content based on the title.
+            if title == "Significant Details":
+                summary_dict[title] = [" ".join(line.strip().replace('- ', '') for line in content.split('\n') if line.strip())]
+            elif title == "Rx Info":
+                summary_dict[title] = [" ".join(line.strip().replace('- ', '') for line in content.split('\n') if line.strip())]
+            elif title == "Prescription Benefit Verification (BV) Info":
+                summary_dict[title] = [" ".join(line.strip().replace('- ', '') for line in content.split('\n') if line.strip())]
+            elif title == "Billing/Invoice":
+                summary_dict[title] = [" ".join(line.strip().replace('- ', '') for line in content.split('\n') if line.strip())]
+            elif title == "General Updates":
+                summary_dict[title] = [" ".join(line.strip().replace('- ', '') for line in content.split('\n') if line.strip())]
+            elif title == "Communication":
+                summary_dict[title] = {
+                    key.replace("- **", "").replace("**", "").strip(): [value.strip()]
+                    for line in content.split('\n') if ':' in line
+                    for key, value in [line.split(':', 1)]
+                }
+    return summary_dict
+
+
+
 @app.on_event("startup")
 async def startup_event():
     """

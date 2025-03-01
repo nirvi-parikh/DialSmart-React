@@ -54,21 +54,47 @@ const App: React.FC = () => {
     fetchData();
   }, []);
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (!selectedPatientId || !selectedDrug) {
       alert("Please select both Patient ID and Drug.");
       return;
     }
-
-    const patientKey = `('${selectedPatientId}', '${selectedDrug}')`;
+  
+    // Get patient info mapping
+    const patientKey = `(${selectedPatientId},${selectedDrug})`; // Key format from API response
     const selectedInfo = patientData?.patient_info?.[patientKey] || null;
-
+  
     if (!selectedInfo) {
       alert("No data found for the selected Patient ID and Drug.");
       return;
     }
-
+  
+    // Update state and fetch summary
     setPatientInfo(selectedInfo);
+    fetchSummary(selectedPatientId);
+  
+    // Generate a unique session_id using uuid
+    const sessionId = uuidv4();
+  
+    // Prepare data payload for insertion
+    const payload = {
+      psr_id: null,
+      psr_name: null,
+      patient_id: selectedPatientId,
+      drug: selectedDrug,
+      session_id: sessionId,
+      comment: null,
+      data_update_ts: new Date().toISOString(), // Current timestamp in ISO format
+    };
+  
+    // Insert data into Spanner table using Axios
+    try {
+      const response = await axios.post('/api/insertData', payload);  // Replace with your actual endpoint
+      console.log('Data inserted successfully:', response.data);
+    } catch (error) {
+      console.error('Error inserting data:', error);
+      alert("Failed to insert data into the Spanner table.");
+    }
   };
 
   // 🚀 **State for Summary Feedback**

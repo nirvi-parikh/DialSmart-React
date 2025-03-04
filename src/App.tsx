@@ -20,6 +20,8 @@ const App: React.FC = () => {
   const [refillFeedback, setRefillFeedback] = useState<string>("");
   const [isTableVisible, setIsTableVisible] = useState<boolean>(false);
   const currentDate = new Date().toLocaleDateString();
+  const [loadingPatient, setLoadingPatient] = useState(false);
+  const [loadingSummary, setLoadingSummary] = useState(false);
 
   useEffect(() => {
     document.title = "CVS DialSmart";
@@ -36,46 +38,78 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoadingPatient(true); // Start loading for patient data
       try {
-        console.log("Fetching data from API...");
-        const response = await axios.get("http://127.0.0.1:5173/data", {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+        console.log("Fetching patient data from API...");
+        const response = await axios.get(
+          "https://spcltopz-dialsmart-api.pss-dev.aig.aetna.com/patient-profile",
+          {
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+
         console.log("API Response:", response.data);
         setPatientData(response.data);
       } catch (error: any) {
-        console.error("Error fetching data:", error.message || error);
+        console.error("Error fetching patient data:", error.message || error);
         alert("Failed to fetch patient data.");
+      } finally {
+        setLoadingPatient(false); // Stop loading
       }
     };
 
-    fetchData();
+    fetchData(); // Call only once on mount
   }, []);
+
+  const fetchSummary = async (patientId: string) => {
+    if (!patientId) return;
+
+    setLoadingSummary(true); // Start loading for summary
+    try {
+      console.log("Fetching summary from API for selected patient id...");
+      const response = await axios.get(
+        `https://spcltopz-dialsmart-api.pss-dev.aig.aetna.com/notes-insights-summary?patient_id=${patientId}`,
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      console.log("Summary API Response:", response.data);
+      setSummaryData(response.data);
+    } catch (error: any) {
+      console.error("Error fetching summary data:", error.message || error);
+      alert("Failed to fetch summary data for the patient.");
+    } finally {
+      setLoadingSummary(false); // Stop loading
+    }
+  };
+
+  const toggleTable = () => {
+    setIsTableVisible((prev) => !prev);
+  };
 
   const handleSearch = async () => {
     if (!selectedPatientId || !selectedDrug) {
       alert("Please select both Patient ID and Drug.");
       return;
     }
-  
+
     // Get patient info mapping
     const patientKey = `(${selectedPatientId},${selectedDrug})`; // Key format from API response
     const selectedInfo = patientData?.patient_info?.[patientKey] || null;
-  
+
     if (!selectedInfo) {
       alert("No data found for the selected Patient ID and Drug.");
       return;
     }
-  
+
     // Update state and fetch summary
     setPatientInfo(selectedInfo);
     fetchSummary(selectedPatientId);
-  
+
     // Generate a unique session_id using uuid
     const sessionId = uuidv4();
-  
+
     // Prepare data payload for insertion
     const payload = {
       psr_id: null,
@@ -86,13 +120,16 @@ const App: React.FC = () => {
       comment: null,
       data_update_ts: new Date().toISOString(), // Current timestamp in ISO format
     };
-  
+
     // Insert data into Spanner table using Axios
     try {
-      const response = await axios.post('/api/insertData', payload);  // Replace with your actual endpoint
-      console.log('Data inserted successfully:', response.data);
+      const response = await axios.post(
+        "https://spcltopz-dialsmart-api.pss-dev.aig.aetna.com/audit_log",
+        payload
+      );
+      console.log("Data inserted successfully:", response.data);
     } catch (error) {
-      console.error('Error inserting data:', error);
+      console.error("Error inserting data:", error);
       alert("Failed to insert data into the Spanner table.");
     }
   };
@@ -172,102 +209,125 @@ const App: React.FC = () => {
   };
 
   return (
-    <div>
-      <Header />
-      <main className="container">
-        <div className="d-flex align-items-center justify-content-between mb-3">
-          <Title />
-          <Dropdowns
-            patientIds={selectPatientIds}
-            drugs={{}}
-            selectedPatientId={selectedPatientId}
-            setSelectedPatientId={setSelectedPatientId}
-            selectedDrug={selectedDrug}
-            setSelectedDrug={setSelectedDrug}
-            onSearch={handleSearch}
-            currentDate={currentDate}
-          />
-        </div>
-
-        <div className="mb-4">
-          <PatientInfo patient={patientInfo} />
-        </div>
-
-        <div style={{ marginTop: "30px" }}>
-          <div className="d-flex gap-3">
-            <div style={{ flex: 1 }}>
-              <SummaryBox />
-              <div style={{ marginTop: "20px" }}>
-                <h5>Summary Feedback</h5>
-                <textarea
-                  className="form-control"
-                  rows={3}
-                  placeholder="Enter feedback for the summary box..."
-                  value={summaryFeedback}
-                  onChange={(e) => setSummaryFeedback(e.target.value)}
-                />
-                <div className="d-flex align-items-center gap-3 mt-2">
-                  <button
-                    className="btn btn-outline-success"
-                    onClick={() => handleThumbFeedback("up", "SummaryBox")}
-                  >
-                    👍
-                  </button>
-                  <button
-                    className="btn btn-outline-danger"
-                    onClick={() => handleThumbFeedback("down", "SummaryBox")}
-                  >
-                    👎
-                  </button>
-                </div>
-                <button
-                  className="btn btn-primary mt-2"
-                  onClick={handleSummaryFeedbackSubmit}
-                  disabled={summaryFeedback.trim() === ""}
-                >
-                  Submit Feedback
-                </button>
-              </div>
-            </div>
-
-            <div style={{ flex: 1 }}>
-              <div style={{ marginTop: "20px" }}>
-                <RefillsLeftBox />
-              </div>
-              <div style={{ marginTop: "20px" }}>
-                <h5>Refill Feedback</h5>
-                <textarea
-                  className="form-control"
-                  rows={3}
-                  placeholder="Enter feedback for the refills left box..."
-                  value={refillFeedback}
-                  onChange={(e) => setRefillFeedback(e.target.value)}
-                />
-                <div className="d-flex align-items-center gap-3 mt-2">
-                  <button
-                    className="btn btn-outline-success"
-                    onClick={() => handleThumbFeedback("up", "RefillsLeftBox")}
-                  >
-                    👍
-                  </button>
-                  <button
-                    className="btn btn-outline-danger"
-                    onClick={() => handleThumbFeedback("down", "RefillsLeftBox")}
-                  >
-                    👎
-                  </button>
-                </div>
-                <button
-                  className="btn btn-primary mt-2"
-                  onClick={handleRefillFeedbackSubmit}
-                  disabled={refillFeedback.trim() === ""}
-                >
-                  Submit Feedback
-                </button>
-              </div>
-            </div>
+      <div>
+        <Header />
+        <main className="container">
+          <div className="d-flex align-items-center justify-content-between mb-3">
+            <Title />
+            <Dropdowns
+              patientIds={selectPatientIds}
+              drugs={{}}
+              selectedPatientId={selectedPatientId}
+              setSelectedPatientId={setSelectedPatientId}
+              selectedDrug={selectedDrug}
+              setSelectedDrug={setSelectedDrug}
+              onSearch={handleSearch}
+            />
           </div>
-        </div>
+    
+          {/* Show Patient Info with Loading */}
+          <div className="mb-4">
+            {loadingPatient ? (
+              <div className="d-flex align-items-center justify-content-center">
+                <span className="spinner-border text-primary" role="status"></span>
+                <span className="ms-2">Loading patient info...</span>
+              </div>
+            ) : (
+              <PatientInfo patient={patientInfo} />
+            )}
+          </div>
+    
+          <div style={{ marginTop: "30px" }}>
+            <div className="d-flex gap-3">
+              <div style={{ flex: 1 }}>
+                {/* Show Summary Box with Loading */}
+                {loadingSummary ? (
+                  <div className="d-flex align-items-center justify-content-center">
+                    <span className="spinner-border text-secondary" role="status"></span>
+                    <span className="ms-2">Loading summary...</span>
+                  </div>
+                ) : (
+                  <SummaryBox summaryData={summaryData} />
+                )}
+    
+                <div style={{ marginTop: "20px" }}>
+                  <h5>Summary Feedback</h5>
+                  <textarea
+                    className="form-control"
+                    rows={3}
+                    placeholder="Enter feedback for the summary box..."
+                    value={summaryFeedback}
+                    onChange={(e) => setSummaryFeedback(e.target.value)}
+                  />
+                  <div className="d-flex align-items-center gap-3 mt-2">
+                    <button
+                      className="btn btn-outline-success"
+                      onClick={() => handleThumbFeedback("up", "SummaryBox")}
+                    >
+                      👍
+                    </button>
+                    <button
+                      className="btn btn-outline-danger"
+                      onClick={() => handleThumbFeedback("down", "SummaryBox")}
+                    >
+                      👎
+                    </button>
+                  </div>
+                  <button
+                    className="btn btn-primary mt-2"
+                    onClick={handleSummaryFeedbackSubmit}
+                    disabled={summaryFeedback.trim() === ""}
+                  >
+                    Submit Feedback
+                  </button>
+                </div>
+              </div>
+    
+              <div style={{ flex: 1 }}>
+                {/* Show Refills Left Box with Loading */}
+                {loadingSummary ? (
+                  <div className="d-flex align-items-center justify-content-center">
+                    <span className="spinner-border text-warning" role="status"></span>
+                    <span className="ms-2">Loading refills...</span>
+                  </div>
+                ) : (
+                  <RefillsLeftBox summaryData={summaryData} />
+                )}
+    
+                <div style={{ marginTop: "20px" }}>
+                  <h5>Refill Feedback</h5>
+                  <textarea
+                    className="form-control"
+                    rows={3}
+                    placeholder="Enter feedback for the refills left box..."
+                    value={refillFeedback}
+                    onChange={(e) => setRefillFeedback(e.target.value)}
+                  />
+                  <div className="d-flex align-items-center gap-3 mt-2">
+                    <button
+                      className="btn btn-outline-success"
+                      onClick={() => handleThumbFeedback("up", "RefillsLeftBox")}
+                    >
+                      👍
+                    </button>
+                    <button
+                      className="btn btn-outline-danger"
+                      onClick={() => handleThumbFeedback("down", "RefillsLeftBox")}
+                    >
+                      👎
+                    </button>
+                  </div>
+                  <button
+                    className="btn btn-primary mt-2"
+                    onClick={handleRefillFeedbackSubmit}
+                    disabled={refillFeedback.trim() === ""}
+                  >
+                    Submit Feedback
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>    
 
          <div style={{ marginTop: "30px" }}>
       {/* Expand/Collapse Button */}

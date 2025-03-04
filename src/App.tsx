@@ -238,96 +238,108 @@ const App: React.FC = () => {
           </div>
     
           <div style={{ marginTop: "30px" }}>
-            <div className="d-flex gap-3">
-              <div style={{ flex: 1 }}>
-                {/* Show Summary Box with Loading */}
-                {loadingSummary ? (
-                  <div className="d-flex align-items-center justify-content-center">
-                    <span className="spinner-border text-secondary" role="status"></span>
-                    <span className="ms-2">Loading summary...</span>
-                  </div>
-                ) : (
-                  <SummaryBox summaryData={summaryData} />
-                )}
-    
-                <div style={{ marginTop: "20px" }}>
-                  <h5>Summary Feedback</h5>
-                  <textarea
-                    className="form-control"
-                    rows={3}
-                    placeholder="Enter feedback for the summary box..."
-                    value={summaryFeedback}
-                    onChange={(e) => setSummaryFeedback(e.target.value)}
-                  />
-                  <div className="d-flex align-items-center gap-3 mt-2">
-                    <button
-                      className="btn btn-outline-success"
-                      onClick={() => handleThumbFeedback("up", "SummaryBox")}
-                    >
-                      👍
-                    </button>
-                    <button
-                      className="btn btn-outline-danger"
-                      onClick={() => handleThumbFeedback("down", "SummaryBox")}
-                    >
-                      👎
-                    </button>
-                  </div>
-                  <button
-                    className="btn btn-primary mt-2"
-                    onClick={handleSummaryFeedbackSubmit}
-                    disabled={summaryFeedback.trim() === ""}
-                  >
-                    Submit Feedback
-                  </button>
-                </div>
+  <div className="d-flex gap-3">
+    {/* Summary Box Section */}
+    <div style={{ flex: 1 }}>
+      {loadingSummary ? (
+        <div className="d-flex align-items-center justify-content-center">
+          <span
+            className="spinner-border spinner-border-sm text-secondary"
+            role="status"
+            style={{ width: "12px", height: "12px", borderWidth: "1.5px" }}
+          ></span>
+          <span className="ms-2" style={{ fontSize: "12px", color: "#6c757d" }}>Loading summary...</span>
+        </div>
+      ) : (
+        summaryData && (
+          <SummaryBox notesSummary={summaryData.notes_summary}>
+            <div style={{ marginTop: "20px" }}>
+              <textarea
+                className="form-control"
+                rows={3}
+                placeholder="Enter feedback for the Notes Summary ..."
+                value={summaryFeedback}
+                onChange={(e) => setSummaryFeedback(e.target.value)}
+              />
+              <div className="d-flex align-items-center gap-3 mt-2">
+                <button
+                  className={`btn ${summaryLike === true ? "btn-success" : "btn-outline-success"}`}
+                  onClick={() => handleThumbFeedback("summary", "up")}
+                >
+                  👍
+                </button>
+                <button
+                  className={`btn ${summaryLike === false ? "btn-danger" : "btn-outline-danger"}`}
+                  onClick={() => handleThumbFeedback("summary", "down")}
+                >
+                  👎
+                </button>
               </div>
-    
-              <div style={{ flex: 1 }}>
-                {/* Show Refills Left Box with Loading */}
-                {loadingSummary ? (
-                  <div className="d-flex align-items-center justify-content-center">
-                    <span className="spinner-border text-warning" role="status"></span>
-                    <span className="ms-2">Loading refills...</span>
-                  </div>
-                ) : (
-                  <RefillsLeftBox summaryData={summaryData} />
-                )}
-    
-                <div style={{ marginTop: "20px" }}>
-                  <h5>Refill Feedback</h5>
-                  <textarea
-                    className="form-control"
-                    rows={3}
-                    placeholder="Enter feedback for the refills left box..."
-                    value={refillFeedback}
-                    onChange={(e) => setRefillFeedback(e.target.value)}
-                  />
-                  <div className="d-flex align-items-center gap-3 mt-2">
-                    <button
-                      className="btn btn-outline-success"
-                      onClick={() => handleThumbFeedback("up", "RefillsLeftBox")}
-                    >
-                      👍
-                    </button>
-                    <button
-                      className="btn btn-outline-danger"
-                      onClick={() => handleThumbFeedback("down", "RefillsLeftBox")}
-                    >
-                      👎
-                    </button>
-                  </div>
-                  <button
-                    className="btn btn-primary mt-2"
-                    onClick={handleRefillFeedbackSubmit}
-                    disabled={refillFeedback.trim() === ""}
-                  >
-                    Submit Feedback
-                  </button>
-                </div>
-              </div>
+              <button
+                className="btn mt-2"
+                style={{ backgroundColor: "#c50005", color: "white" }}
+                onClick={() => handleSubmitFeedback("summary")}
+                disabled={!summaryFeedback.trim()}
+              >
+                Submit
+              </button>
             </div>
-          </div>    
+          </SummaryBox>
+        )
+      )}
+    </div>
+
+    {/* Data Insights Box Section */}
+    <div style={{ flex: 1 }}>
+      {loadingSummary ? (
+        <div className="d-flex align-items-center justify-content-center">
+          <span
+            className="spinner-border spinner-border-sm text-secondary"
+            role="status"
+            style={{ width: "12px", height: "12px", borderWidth: "1.5px" }}
+          ></span>
+          <span className="ms-2" style={{ fontSize: "12px", color: "#6c757d" }}>Loading insights...</span>
+        </div>
+      ) : (
+        summaryData && (
+          <DataInsightsBox data={summaryData.insights_summary}>
+            <div style={{ marginTop: "20px" }}>
+              <textarea
+                className="form-control"
+                rows={3}
+                placeholder="Enter feedback for the Data Insights ..."
+                value={insightsFeedback}
+                onChange={(e) => setInsightsFeedback(e.target.value)}
+              />
+              <div className="d-flex align-items-center gap-3 mt-2">
+                <button
+                  className={`btn ${insightsLike === true ? "btn-success" : "btn-outline-success"}`}
+                  onClick={() => handleThumbFeedback("insights", "up")}
+                >
+                  👍
+                </button>
+                <button
+                  className={`btn ${insightsLike === false ? "btn-danger" : "btn-outline-danger"}`}
+                  onClick={() => handleThumbFeedback("insights", "down")}
+                >
+                  👎
+                </button>
+              </div>
+              <button
+                className="btn mt-2"
+                style={{ backgroundColor: "#c50005", color: "white" }}
+                onClick={() => handleSubmitFeedback("insights")}
+                disabled={!insightsFeedback.trim()}
+              >
+                Submit
+              </button>
+            </div>
+          </DataInsightsBox>
+        )
+      )}
+    </div>
+  </div>
+</div>
 
          <div style={{ marginTop: "30px" }}>
       {/* Expand/Collapse Button */}

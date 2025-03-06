@@ -3,17 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from google.cloud import storage
 import pandas as pd
 
-app = FastAPI()
 
-# Configure CORS
-origins = ["http://localhost:5173"]  # React or other frontend URL
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # Constants
 BUCKET_NAME = "your-gcs-bucket-name"
@@ -89,22 +79,17 @@ def parse_summary_to_json(summary_text):
     return summary_dict
 
 
+app = FastAPI()
 
-@app.on_event("startup")
-async def startup_event():
-    """
-    Load the CSV data from GCS into a global DataFrame on application startup.
-    """
-    global dataframe
-    try:
-        print("Starting up and loading data from GCS...")
-        # Load data from GCS
-        dataframe = load_csv_from_gcs()
-        print("DataFrame loaded successfully:")
-        print(dataframe.head())  # Debug: Print first few rows of the DataFrame
-    except Exception as e:
-        print(f"Error loading data: {e}")
-
+# Configure CORS
+origins = ["http://localhost:5173"]  # React or other frontend URL
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 INCLUDE_FIELDS = [
     "PTNT_ID",
@@ -125,7 +110,15 @@ async def get_data():
     Returns:
         dict: Contains patient_id, drugs_by_patient, and patient_info mapping.
     """
-    global dataframe
+    try:
+        print("Starting up and loading data from GCS...")
+        # Load data from GCS
+        dataframe = load_csv_from_gcs()
+        print("DataFrame loaded successfully:")
+        print(dataframe.head())  # Debug: Print first few rows of the DataFrame
+    except Exception as e:
+        print(f"Error loading data: {e}")
+
     if dataframe is None:
         raise HTTPException(status_code=500, detail="Data not loaded")
 

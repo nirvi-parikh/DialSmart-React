@@ -1,8 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const [sortedColumn, setSortedColumn] = useState<string | null>(null);
 const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-const [sortedData, setSortedData] = useState(summaryData?.df_notes || []);
+const [sortedData, setSortedData] = useState<any[]>([]);
+
+// Populate the table initially with unsorted data
+useEffect(() => {
+  if (summaryData?.df_notes) {
+    setSortedData(summaryData.df_notes);
+  }
+}, [summaryData]);
 
 const handleSort = (column: string) => {
   let newSortOrder = "asc";
@@ -12,8 +19,8 @@ const handleSort = (column: string) => {
   
   setSortedColumn(column);
   setSortOrder(newSortOrder);
-  
-  const sorted = [...summaryData.df_notes].sort((a, b) => {
+
+  const sorted = [...sortedData].sort((a, b) => {
     if (a[column] === null || a[column] === undefined) return 1;
     if (b[column] === null || b[column] === undefined) return -1;
     
@@ -34,7 +41,7 @@ const handleSort = (column: string) => {
     
     <div onClick={toggleTable} style={{ cursor: "pointer", color: "#333", display: "flex", alignItems: "center", justifyContent: "space-between", fontWeight: "bold" }}>
       <span>📋 Patient Notes <span style={{ fontSize: "14px", fontWeight: "normal", color: "gray" }}>(Used for above Notes Summary)</span></span>
-      <span>{isTableVisible ? "▲" : "▼"}</span>
+      <span>{isTableVisible ? "➖" : "➕"}</span>
     </div>
 
     {isTableVisible && (

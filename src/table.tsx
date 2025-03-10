@@ -1,168 +1,78 @@
-import React, { useState, useMemo } from "react";
-import { useTable, useSortBy, useFilters } from "react-table";
-import Papa from "papaparse"; // CSV Parsing Library
+import { useState } from "react";
 
-// Custom filter UI
-const DefaultColumnFilter = ({ column: { filterValue, setFilter } }) => {
-  return (
-    <input
-      value={filterValue || ""}
-      onChange={(e) => setFilter(e.target.value || undefined)}
-      placeholder="Search..."
-      style={{ width: "100%", fontSize: "12px" }}
-    />
-  );
+const [sortedColumn, setSortedColumn] = useState<string | null>(null);
+const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+const [sortedData, setSortedData] = useState(summaryData?.df_notes || []);
+
+const handleSort = (column: string) => {
+  let newSortOrder = "asc";
+  if (sortedColumn === column && sortOrder === "asc") {
+    newSortOrder = "desc";
+  }
+  
+  setSortedColumn(column);
+  setSortOrder(newSortOrder);
+  
+  const sorted = [...summaryData.df_notes].sort((a, b) => {
+    if (a[column] === null || a[column] === undefined) return 1;
+    if (b[column] === null || b[column] === undefined) return -1;
+    
+    if (typeof a[column] === "number") {
+      return newSortOrder === "asc" ? a[column] - b[column] : b[column] - a[column];
+    }
+    
+    return newSortOrder === "asc"
+      ? String(a[column]).localeCompare(String(b[column]))
+      : String(b[column]).localeCompare(String(a[column]));
+  });
+
+  setSortedData(sorted);
 };
 
-const App = ({ summaryData }: { summaryData: any }) => {
-  const [isTableVisible, setIsTableVisible] = useState(false);
-
-  const toggleTable = () => setIsTableVisible(!isTableVisible);
-
-  // Define table columns with filtering
-  const columns = useMemo(
-    () => [
-      { Header: "spclt_ptnt_gid", accessor: "spclt_ptnt_gid" },
-      { Header: "note_typ_cd", accessor: "note_typ_cd" },
-      { Header: "src_add_ts", accessor: "src_add_ts" },
-      { Header: "note_txt", accessor: "note_txt" },
-      { Header: "note_smry_txt", accessor: "note_smry_txt" },
-      { Header: "note_description", accessor: "note_description" },
-      { Header: "notes", accessor: "notes" },
-      { Header: "patient_id", accessor: "patient_id" },
-      { Header: "ptnt_id", accessor: "ptnt_id" },
-    ],
-    []
-  );
-
-  const data = useMemo(() => summaryData?.df_notes || [], [summaryData]);
-
-  const defaultColumn = useMemo(
-    () => ({
-      Filter: DefaultColumnFilter,
-    }),
-    []
-  );
-
-  const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } =
-    useTable({ columns, data, defaultColumn }, useFilters, useSortBy);
-
-  // Function to Download CSV
-  const downloadCSV = () => {
-    const csvData = data.map((row) =>
-      columns.reduce((acc, col) => {
-        acc[col.accessor] = row[col.accessor] || "N/A"; // Handle missing values
-        return acc;
-      }, {} as any)
-    );
-
-    const csv = Papa.unparse(csvData);
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "patient_notes.csv";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  };
-
-  return (
-    <div style={{ marginTop: "30px" }}>
-      {summaryData && (
-        <>
-          <div
-            onClick={toggleTable}
-            style={{
-              cursor: "pointer",
-              backgroundColor: "#f8f9fa",
-              color: "#333",
-              padding: "10px 15px",
-              borderRadius: "5px",
-              marginBottom: "10px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              border: "1px solid #ccc",
-              fontWeight: "bold",
-            }}
-          >
-            <span>
-              📋 Patient Notes{" "}
-              <span style={{ fontSize: "14px", fontWeight: "normal", color: "gray" }}>
-                (Used for above Notes Summary)
-              </span>
-            </span>
-            <span>{isTableVisible ? "▲" : "▼"}</span>
-          </div>
-
-          {isTableVisible && summaryData?.df_notes?.length > 0 ? (
-            <>
-              <button
-                onClick={downloadCSV}
-                style={{
-                  backgroundColor: "#007bff",
-                  color: "#fff",
-                  padding: "8px 12px",
-                  borderRadius: "5px",
-                  border: "none",
-                  cursor: "pointer",
-                  marginBottom: "10px",
-                }}
-              >
-                📥 Download CSV
-              </button>
-
-              <div
-                className="card card-body"
-                style={{
-                  maxHeight: "300px",
-                  overflowY: "auto",
-                  border: "1px solid #ddd",
-                  padding: "10px",
-                  borderRadius: "5px",
-                }}
-              >
-                <table {...getTableProps()} className="table table-bordered">
-                  <thead>
-                    {headerGroups.map((headerGroup) => (
-                      <tr {...headerGroup.getHeaderGroupProps()} style={{ fontSize: "13px" }}>
-                        {headerGroup.headers.map((column) => (
-                          <th
-                            {...column.getHeaderProps(column.getSortByToggleProps())}
-                            style={{ cursor: "pointer" }}
-                          >
-                            {column.render("Header")}
-                            <span>{column.isSorted ? (column.isSortedDesc ? " ▼" : " ▲") : ""}</span>
-                            <div>{column.canFilter ? column.render("Filter") : null}</div>
-                          </th>
-                        ))}
-                      </tr>
-                    ))}
-                  </thead>
-                  <tbody {...getTableBodyProps()}>
-                    {rows.map((row) => {
-                      prepareRow(row);
-                      return (
-                        <tr {...row.getRowProps()} style={{ fontSize: "12px" }}>
-                          {row.cells.map((cell) => (
-                            <td {...cell.getCellProps()}>{cell.render("Cell") || "N/A"}</td>
-                          ))}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          ) : isTableVisible ? (
-            <p>No patient notes available.</p>
-          ) : null}
-        </>
-      )}
+{summaryData && (
+  <div style={{ marginTop: "30px", backgroundColor: "#f8f9fa", border: "1px solid #ccc", borderRadius: "5px", padding: "10px 15px" }}>
+    
+    <div onClick={toggleTable} style={{ cursor: "pointer", color: "#333", display: "flex", alignItems: "center", justifyContent: "space-between", fontWeight: "bold" }}>
+      <span>📋 Patient Notes <span style={{ fontSize: "14px", fontWeight: "normal", color: "gray" }}>(Used for above Notes Summary)</span></span>
+      <span>{isTableVisible ? "▲" : "▼"}</span>
     </div>
-  );
-};
 
-export default App;
+    {isTableVisible && (
+      <div className="card card-body" style={{ maxHeight: "200px", overflowY: "auto", marginTop: "10px", border: "1px solid #ddd", padding: "10px", borderRadius: "5px", backgroundColor: "white" }}>
+        {sortedData.length > 0 ? (
+          <table className="table table-bordered">
+            <thead>
+              <tr style={{ fontSize: "13px", cursor: "pointer" }}>
+                {[
+                  "spclt_ptnt_gid", "note_typ_cd", "src_add_ts", "note_txt",
+                  "note_smry_txt", "note_description", "notes", "patient_id", "ptnt_id"
+                ].map((column) => (
+                  <th key={column} onClick={() => handleSort(column)}>
+                    {column} {sortedColumn === column ? (sortOrder === "asc" ? "🔼" : "🔽") : ""}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sortedData.map((item: any, index: number) => (
+                <tr key={index} style={{ fontSize: "12px" }}>
+                  <td>{item.spclt_ptnt_gid}</td>
+                  <td>{item.note_typ_cd}</td>
+                  <td>{item.src_add_ts || "N/A"}</td>
+                  <td>{item.note_txt || "N/A"}</td>
+                  <td>{item.note_smry_txt}</td>
+                  <td>{item.note_description}</td>
+                  <td>{item.notes || "N/A"}</td>
+                  <td>{item.patient_id || "N/A"}</td>
+                  <td>{item.ptnt_id || "N/A"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p>No patient notes available.</p>
+        )}
+      </div>
+    )}
+  </div>
+)}

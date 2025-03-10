@@ -1,6 +1,12 @@
 import React, { useState } from "react";
 
-const PatientNotesTable = ({ summaryData }: { summaryData: any }) => {
+interface PatientNotesTableProps {
+  summaryData: {
+    df_notes: Array<{ [key: string]: any }>;
+  };
+}
+
+const PatientNotesTable: React.FC<PatientNotesTableProps> = ({ summaryData }) => {
   const [isTableVisible, setIsTableVisible] = useState(false);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");

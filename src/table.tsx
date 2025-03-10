@@ -36,6 +36,13 @@ const handleSort = (column: string) => {
   setSortedData(sorted);
 };
 
+const getSortIcon = (column: string) => {
+    if (sortedColumn === column) {
+      return sortOrder === "asc" ? "🔼" : "🔽"; // Change to ↑ or ↓ if you prefer
+    }
+    return "⬍"; // Default unsorted icon
+  };
+
 {summaryData && (
   <div style={{ marginTop: "30px", backgroundColor: "#f8f9fa", border: "1px solid #ccc", borderRadius: "5px", padding: "10px 15px" }}>
     
@@ -49,17 +56,18 @@ const handleSort = (column: string) => {
         {sortedData.length > 0 ? (
           <table className="table table-bordered">
             <thead>
-              <tr style={{ fontSize: "13px", cursor: "pointer" }}>
-                {[
-                  "spclt_ptnt_gid", "note_typ_cd", "src_add_ts", "note_txt",
-                  "note_smry_txt", "note_description", "notes", "patient_id", "ptnt_id"
-                ].map((column) => (
-                  <th key={column} onClick={() => handleSort(column)}>
-                    {column} {sortedColumn === column ? (sortOrder === "asc" ? "🔼" : "🔽") : ""}
-                  </th>
-                ))}
-              </tr>
-            </thead>
+    <tr style={{ fontSize: "13px", cursor: "pointer" }}>
+      {[
+        "spclt_ptnt_gid", "note_typ_cd", "src_add_ts", "note_txt",
+        "note_smry_txt", "note_description", "notes", "patient_id", "ptnt_id"
+      ].map((column) => (
+        <th key={column} onClick={() => handleSort(column)} style={{ display: "flex", alignItems: "center" }}>
+          <span>{column}</span>
+          <span style={{ marginLeft: "5px" }}>{getSortIcon(column)}</span>
+        </th>
+      ))}
+    </tr>
+  </thead>
             <tbody>
               {sortedData.map((item: any, index: number) => (
                 <tr key={index} style={{ fontSize: "12px" }}>

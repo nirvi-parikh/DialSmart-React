@@ -341,7 +341,7 @@ const App: React.FC = () => {
   </div>
 </div>
 
-         <div style={{ marginTop: "30px" }}>
+    <div style={{ marginTop: "30px" }}>
       {/* Expand/Collapse Button */}
       <div
         onClick={toggleTable}

@@ -1,69 +1,57 @@
 import React, { useState } from "react";
 
-interface PatientNotesTableProps {
-  summaryData: {
-    df_notes: Array<{ [key: string]: any }>;
-  };
-}
-
-const PatientNotesTable: React.FC<PatientNotesTableProps> = ({ summaryData }) => {
+const PatientNotesTable = ({ summaryData }: { summaryData: any }) => {
   const [isTableVisible, setIsTableVisible] = useState(false);
-  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortedColumn, setSortedColumn] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const [filters, setFilters] = useState<{ [key: string]: string }>({});
+  const [sortedData, setSortedData] = useState(summaryData?.df_notes || []);
 
+  // Toggle table visibility
   const toggleTable = () => {
     setIsTableVisible(!isTableVisible);
+    if (!isTableVisible) {
+      setSortedData(summaryData?.df_notes || []); // Show unsorted data initially
+      setSortedColumn(null); // Reset sorting when reopening
+    }
   };
 
-  const columns = [
-    "spclt_ptnt_gid",
-    "note_typ_cd",
-    "src_add_ts",
-    "note_txt",
-    "note_smry_txt",
-    "note_description",
-    "notes",
-    "patient_id",
-    "ptnt_id",
-  ];
-
+  // Sorting function
   const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortColumn(column);
-      setSortOrder("asc");
+    let newSortOrder = "asc";
+    if (sortedColumn === column && sortOrder === "asc") {
+      newSortOrder = "desc";
     }
-  };
 
-  const getSortIcon = (column: string) => {
-    if (sortColumn === column) {
-      return sortOrder === "asc" ? "▲" : "▼";
-    }
-    return "⇅"; // Default icon when not sorted
-  };
+    setSortedColumn(column);
+    setSortOrder(newSortOrder);
 
-  const handleFilterChange = (column: string, value: string) => {
-    setFilters({ ...filters, [column]: value });
-  };
+    const sorted = [...sortedData].sort((a, b) => {
+      if (a[column] === null || a[column] === undefined) return 1;
+      if (b[column] === null || b[column] === undefined) return -1;
 
-  const filteredAndSortedData = [...(summaryData?.df_notes || [])]
-    .filter((item) =>
-      columns.every(
-        (column) =>
-          !filters[column] || String(item[column] || "").toLowerCase().includes(filters[column].toLowerCase())
-      )
-    )
-    .sort((a, b) => {
-      if (!sortColumn) return 0;
-      const valA = a[sortColumn] || "";
-      const valB = b[sortColumn] || "";
-      return sortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      if (typeof a[column] === "number") {
+        return newSortOrder === "asc" ? a[column] - b[column] : b[column] - a[column];
+      }
+
+      return newSortOrder === "asc"
+        ? String(a[column]).localeCompare(String(b[column]))
+        : String(b[column]).localeCompare(String(a[column]));
     });
+
+    setSortedData(sorted);
+  };
+
+  // Get sort icon for column headers
+  const getSortIcon = (column: string) => {
+    if (sortedColumn === column) {
+      return sortOrder === "asc" ? "🔼" : "🔽"; // Change to ↑ or ↓ if preferred
+    }
+    return "⬍"; // Default unsorted icon
+  };
 
   return (
     <div style={{ marginTop: "30px" }}>
+      {/* Header for Patient Notes */}
       <div
         onClick={toggleTable}
         style={{
@@ -89,54 +77,52 @@ const PatientNotesTable: React.FC<PatientNotesTableProps> = ({ summaryData }) =>
         <span>{isTableVisible ? "➖" : "➕"}</span>
       </div>
 
+      {/* Table */}
       {isTableVisible && (
         <div
           className="card card-body"
           style={{
-            maxHeight: "400px",
+            maxHeight: "200px", // Scrollable when content exceeds height
             overflowY: "auto",
             border: "1px solid #ddd",
             padding: "10px",
             borderRadius: "5px",
-            marginTop: "10px",
           }}
         >
-          {filteredAndSortedData.length > 0 ? (
+          {sortedData.length > 0 ? (
             <table className="table table-bordered">
               <thead>
                 <tr style={{ fontSize: "13px", cursor: "pointer" }}>
-                  {columns.map((column) => (
-                    <th key={column} onClick={() => handleSort(column)}>
-                      {column} <span>{getSortIcon(column)}</span>
-                    </th>
-                  ))}
-                </tr>
-                <tr>
-                  {columns.map((column) => (
-                    <th key={column}>
-                      <input
-                        type="text"
-                        placeholder="Search..."
-                        value={filters[column] || ""}
-                        onChange={(e) => handleFilterChange(column, e.target.value)}
-                        style={{
-                          width: "100%",
-                          fontSize: "12px",
-                          padding: "4px",
-                          border: "1px solid #ccc",
-                          borderRadius: "3px",
-                        }}
-                      />
-                    </th>
+                  {[
+                    "spclt_ptnt_gid",
+                    "note_typ_cd",
+                    "src_add_ts",
+                    "note_txt",
+                    "note_smry_txt",
+                    "note_description",
+                    "notes",
+                    "patient_id",
+                    "ptnt_id",
+                  ].map((column) => (
+                    <th key={column} onClick={() => handleSort(column)} style={{ cursor: "pointer" }}>
+  {column} <span>{getSortIcon(column)}</span>
+</th>
+
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {filteredAndSortedData.map((item, index) => (
+                {sortedData.map((item: any, index: number) => (
                   <tr key={index} style={{ fontSize: "12px" }}>
-                    {columns.map((column) => (
-                      <td key={column}>{item[column] || "N/A"}</td>
-                    ))}
+                    <td>{item.spclt_ptnt_gid}</td>
+                    <td>{item.note_typ_cd}</td>
+                    <td>{item.src_add_ts || "N/A"}</td>
+                    <td>{item.note_txt || "N/A"}</td>
+                    <td>{item.note_smry_txt}</td>
+                    <td>{item.note_description}</td>
+                    <td>{item.notes || "N/A"}</td>
+                    <td>{item.patient_id || "N/A"}</td>
+                    <td>{item.ptnt_id || "N/A"}</td>
                   </tr>
                 ))}
               </tbody>

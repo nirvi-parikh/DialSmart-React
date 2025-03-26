@@ -6,7 +6,7 @@ def parse_drug_data(text):
     # Hardcoded section headings
     sections = ["Drug Eligibility", "Digital Fill History"]
     
-    # Finding section headers while preserving the content integrity
+    # Finding section headers while preserving content integrity
     pattern = r"\*\*(.*?)\*\*"
     matches = list(re.finditer(pattern, text))
 
@@ -27,8 +27,11 @@ def parse_drug_data(text):
     if current_section:
         section_data[current_section] = text[last_index:].strip()
 
-    # Processing section content while preserving ** inside text
+    # Processing section content while removing ** inside text
     for section, content in section_data.items():
+        # Remove ** from text
+        content = re.sub(r"\*\*(.*?)\*\*", r"\1", content)
+        
         lines = [re.sub(r'^[*\-]\s*', '', line.strip()) for line in content.split("\n") if line.strip()]
         
         sub_section = None
@@ -65,6 +68,8 @@ input_text = """**Drug Eligibility**
 - Past 12 fills: 91.67% digital
 - Past 6 fills: 83.33% digital
 - Past 12 fills: 91.67% digital
+
+* Consistent eligibility across all instances.
 
 **Digital Fill History**
 
